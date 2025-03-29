@@ -15,6 +15,8 @@
 #include <mutex>
 #include <map>
 #include <unordered_map>
+#include <unordered_set>
+#include <algorithm>
 
 
 #define SPACE "                      "
@@ -26,6 +28,9 @@
 #define KEY_RIGHT 77
 #define KEY_DOWN 80
 #define KEY_ENTER 13
+#define KEY_ESC 27
+#define KEY_W 87
+#define KEY_S 83
 
 // Regular Colors
 #define BLACK       "\033[30m" 
@@ -94,11 +99,15 @@ string BACKGROUND = "40";
 string RESET = "\033[" + FOREGROUND + ";" + BACKGROUND + "m";
 string BORDER_COLOR = "37";
 			// WHITE BG BLACK TEXT         // BRIGHT RED BG BLACK TEXT
-			
+	
+// SA BOARD SETTINGS NI		
 string BOARD_BACKGROUND[] = {"106", "103"};
 string alt_color[] = {"\033[" + string("30") + ";" + BOARD_BACKGROUND[0] + "m", "\033[" + string("30") + ";"+ BOARD_BACKGROUND[1] + "m"};
+string SYMBOL_COLORS[] = {"31", "33", "32", "36"}; // Snake Tail Ladder Special(POWERUP)
 
 string TEXT_COLOR = "30";
+
+// MENU HIGHLIGHT
 string HIGHLIGHT = "\033[103;30m";
 
 //[-------------------------------VARIABLES-------------------------------]
@@ -110,7 +119,7 @@ struct playa {
 	string name = "";
 	int position = -1;
 	string color;
-	int completed = 0;
+	bool completed;
 };
 
 string boardColor = "0";
@@ -130,11 +139,18 @@ int color_position = 1;
 int selectingPlayer = -1;
 
 unordered_map<int, int> snakes = {
-    {99, 7}, {56, 15}, {47, 20}, {88, 24}  // Snake bites, move down
+    {99, 7},  {56, 15}, {47, 20}, {88, 24}, {94, 45}, 
+    {78, 37}, {82, 59}, {67, 29}, {35, 5},  {14, 4},  
+    {19, 8},  {23, 2},  {31, 9}
 };
 
 unordered_map<int, int> ladders = {
-    {3, 22}, {6, 25}, {11, 40}, {60, 85}   // Ladders, move up
+    {3, 22},  {6, 25},  {11, 40}, {60, 85}, {17, 33}, 
+    {27, 50}, {44, 66}, {53, 74}, {63, 81}, {72, 91}
+};
+
+unordered_set<int> powerups = {
+    5, 12, 19, 26, 39, 48, 58, 69, 72, 89
 };
 
 vector<string> availableColors = {
@@ -182,6 +198,10 @@ void EnterName();
 void StartGame();
 void SelectColors();
 void SelectPlayerColor();
+void ClearGame();
+void showCursor();
+void hideCursor();
+void displayLegend();
 //------------------------------------------------------------------------
 
 int main()
@@ -197,7 +217,7 @@ int main()
 	
 	SetConsoleOutputCP(CP_UTF8);
 	//system("chcp 65001 > nul");
-	setConsoleSize(1200, 1080);
+	setConsoleSize(1200, 1200);
     cout << "\n\n" << RESET;
     
     system(charColor);
@@ -269,6 +289,7 @@ int main()
 
 void EnterName() {
 	int colorIndex = 0;
+	bool proceed=true;
 	for(int i = name_position; i <= numOfPlayers; i++) {
 		system("cls");
 		LogoArt();
@@ -280,18 +301,32 @@ void EnterName() {
 	    cout << SPACE "█                                                                        █" << endl;
 	    cout << SPACE "█                                                                        █" << endl;
 	    cout << SPACE "█▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄█" << endl;
+	    cout << endl;
 	    
-	    cout << "\033[2A";  
+	    int count = 1;
+	    if(Player.size() > 0) {
+	    	cout << SPACE SPACE2 "Player list:" << endl;
+    		for(const playa& p : Player) {
+    			cout << SPACE SPACE2 << count << ". " << p.name << endl;
+    			count++;
+			}
+		}
+	    
+	    if(count == 1)
+	    	cout << "\033[3A"; 
+	    else
+	    	cout << "\033[" + to_string(3+count) + "A";  
+	    	
 	    cout << "\033[46C"; 
 		string names;
 	    getline(cin >> ws, names);
 	    if(names[0] == '0') {
 	    	if(name_position == 1) {
-	    		Player.pop_back();
-	    		name_position = 0;
+	    		proceed=false;
 	    		break;
 			}
 	    	i--;
+	    	Player.pop_back();
 	    	name_position--;
 	    	Pause(500);
 	    	continue;
@@ -327,12 +362,14 @@ void EnterName() {
 	    }
 	
 		
-		Player.push_back({names, 1, assignedColor, 0});
+		Player.push_back({names, 95, assignedColor, false});
 		name_position++;
 	}
-	if(name_position == 0) {
+	
+	if(!proceed) {
 		Player.clear();
 		STATUS=SELECT_PLAYERS;
+		name_position = -1;
 		return;
 	}
 	system("cls");
@@ -407,6 +444,13 @@ void diceArt(int number) {
     }
 }
 
+void ClearGame() {
+	turnToPlay = -1;
+	numOfPlayers = 0;
+	selectingPlayer = -1;
+	Player.clear();
+}
+
 void rollDiceAnimation() {
     srand(time(0));
     int revealAt = rand() % 3 + 3;
@@ -440,23 +484,68 @@ void StartGame() {
 	while(true) {
 		system("cls");
 		LogoArt();
+		displayLegend();
+		cout << "\033[1A";
+		cout << "\033[s";
+		cout << "\n";
 		displayBoard();
 		
 		int player = turnToPlay-1;
 		
 		cout << endl << SPACE SPACE2 << "\033[" << Player[player].color << "m" << Player[player].name << RESET << ", press Enter to roll the dice!" << endl << SPACE SPACE2;
 		char input;
+		int confirm=-1;
 		while(1) {
+			FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
 			input = _getch();
-			if(input != KEY_ENTER) {
-				continue;
+			input = tolower(input);
+			if(input == KEY_ESC) {
+				cout << "Do you want to return to main menu? (y/n)?: " << endl;
+				char input2;
+				while(1) {
+					FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
+					input2 = _getch();
+					input2 = tolower(input2);
+					if(input2 == 'Y' || input2 == 'y') {
+						confirm = 1;
+						break;
+					}
+					else if(input2 == 'N' || input2 == 'n') {
+						confirm = 0;
+						break;	
+					}
+				
+					continue;
+				}
+				if(confirm == 0) {
+					cout << endl << SPACE SPACE2 << "\033[" << Player[player].color << "m" << Player[player].name << RESET << ", press Enter to roll the dice!" << endl << SPACE SPACE2;
+					continue;
+				}
 			}
-			break;
+			
+			if(confirm == 1)
+				break;
+			
+			if(input == KEY_ENTER) {
+				break;
+			}
+			
+			
+			continue;
+		}
+		
+		if(confirm == 1)
+		{
+			STATUS = MAINMENU;
+			cout << SPACE SPACE2 << "Returning to main menu... " << endl;
+			ClearGame();
+			Pause(800);
+			return;
 		}
 		
 		cout << "Rolling the dice...\n" << "\033[" << Player[player].color << "m";
 		rollDiceAnimation();
-		Pause(800);
+		//Pause(800);
 		cout << "\033[8A\033[J";
         int randomNum = revealFinalDice();
 		
@@ -471,25 +560,121 @@ void StartGame() {
 			FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
 			_getch();
 			
-			while(start < randomNum) {
-				Player[player].position++;
-				system("cls");
-				LogoArt();
-				displayBoard();
-				fflush(stdout);
-				start++;
-				Pause(750);	
+			int finalPos = Player[player].position + randomNum;
+		
+			hideCursor();
+			while (Player[player].position < 100 && Player[player].position < finalPos) { 
+			    Player[player].position++;
+			    cout << "\033[u";
+			    displayBoard();
+			    fflush(stdout);
+			    Pause(200);
 			}
+			
+			// If finalPos exceeds 100, start bouncing back
+			if (finalPos > 100) {
+			    int excess = finalPos - 100;  // Extra steps beyond 100
+			
+			    while (excess > 0) { 
+			        Player[player].position--;
+			        excess--;
+			        cout << "\033[u";
+			        displayBoard();
+			        fflush(stdout);
+			        Pause(200);
+			    }
+			}
+			
+			finalPos = Player[player].position;
+				
+			if (ladders.find(finalPos) != ladders.end()) {
+		        int ladderEnd = ladders[finalPos]; 
+		
+		        cout << SPACE SPACE2 << "\033[" << Player[player].color << "m" << Player[player].name << RESET << ", has stepped on a \033[" << SYMBOL_COLORS[2] << "mLADDER! +" << ladderEnd - finalPos << RESET << ".";
+		        _getch();
+		        hideCursor();
+		        while (Player[player].position < ladderEnd) {
+		            Player[player].position += 2;  
+		            if (Player[player].position > ladderEnd) {
+		                Player[player].position = ladderEnd; 
+		            }
+		            cout << "\033[u";
+		            displayBoard();
+		            
+		            fflush(stdout);
+		            Pause(200); 
+		        }
+		        showCursor();
+		    }
+		    else if (snakes.find(finalPos) != snakes.end()) {
+		        int snakeTail = snakes[finalPos]; 
+		
+		        
+		        cout << SPACE SPACE2 << "\033[" << Player[player].color << "m" << Player[player].name << RESET << ", has stepped on a \033[" << SYMBOL_COLORS[0] << "mSNAKE! -" << snakeTail - finalPos << RESET << ".";
+		        _getch();
+		        hideCursor();
+		        while (Player[player].position > snakeTail) {
+		            Player[player].position -= 2;  
+		            if (Player[player].position < snakeTail) {
+		                Player[player].position = snakeTail; 
+		            }
+		            cout << "\033[u";
+		            displayBoard();
+		            fflush(stdout);
+		            Pause(200);  
+		        }
+		        showCursor();
+	    	}
+	    	else if (powerups.find(Player[player].position) != powerups.end()) {
+			    // Player landed on a power-up tile.
+			    // Do nothing for now.
+			}
+			
+			if (Player[player].position == 100) {
+			    cout << SPACE SPACE2 << "\033[" << Player[player].color << "m" << Player[player].name 
+			         << RESET << " has reached **100** and **WON** the game! 🎉";
+			    _getch();
+			    Player[player].completed = true; 
+			    return;
+			}
+			
+			int activePlayers = 0;
+			for (int i = 0; i < numOfPlayers; i++) {
+			    if (!Player[i].completed) {
+			        activePlayers++;
+			    }
+			}
+			
+			// If only one player remains, the game ends
+			if (activePlayers == 1) {
+			    cout << SPACE SPACE2 << "All players have completed the game! The game is over." << endl;
+			    _getch();
+			    return;
+			}
+
+			int attempts = numOfPlayers;
+			do {
+			    turnToPlay = (turnToPlay) % numOfPlayers;  // Ensure index stays within bounds
+			    attempts--;
+			} while (Player[turnToPlay].completed && attempts > 0);  // Skip completed players
+			turnToPlay++;
 		}
 		else {
 			Player[player].position += randomNum;
 		}
 		
 		if(turnToPlay == numOfPlayers) {
-			turnToPlay = 1;
-			continue;
+		    turnToPlay = 1;
+		} else {
+		    turnToPlay++;
 		}
-		turnToPlay++;
+		
+		while (Player[turnToPlay - 1].completed == true) {
+		    turnToPlay++;
+		    if (turnToPlay > numOfPlayers) {
+		        turnToPlay = 1;
+		    }
+		}
 	}
 }
 
@@ -524,23 +709,6 @@ void SelectPlayerColor() {
     for (size_t i = 1; i <= sizedt; i++) {
 	    options[i] = "\033[" + storedColors[i] + "m●" + RESET; 
 	}
-
-	/*
-    int count = 1;
-    for (size_t i = 0; i < availableColors.size(); i++) {
-		bool available = true;
-		for(const playa& p : Player) {
-			if(p.color.compare(availableColors[i]) == 0) {
-				available = false;
-			}	
-		}
-		
-		if(available) {
-			//storedColor[i] = availableColors[i];
-			options[count] = "\033[" + availableColors[i] + "m●";
-			count++;
-		}
-    }*/
 		
     int cursor = 0;
 	while(1) {
@@ -580,7 +748,7 @@ void SelectPlayerColor() {
 					
 			}
 			
-			case KEY_UP: {
+			case KEY_UP: case KEY_W: {
 				if(cursor == 0) {
 					cursor = sizedt;
 				}
@@ -662,7 +830,7 @@ void SelectColors() {
 				break;
 			}
 			
-			case KEY_UP: {
+			case KEY_UP: case KEY_W: {
 				if(cursor == 0) {
 					cursor = size+1;
 				}
@@ -672,7 +840,7 @@ void SelectColors() {
 					PlaySound(TEXT("resources/menu-sfx.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NOSTOP);
 				break;
 			}
-			case KEY_DOWN: case 'S': {
+			case KEY_DOWN: case KEY_S: {
 				if(cursor == size+1) {
 					cursor = 0;
 				}
@@ -741,7 +909,7 @@ void SelectPlayers() {
 				break;
 			}
 			
-			case KEY_UP: {
+			case KEY_UP: case KEY_W: {
 				if(cursor == 0) {
 					cursor = size-1;
 				}
@@ -751,7 +919,7 @@ void SelectPlayers() {
 					PlaySound(TEXT("resources/menu-sfx.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NOSTOP);
 				break;
 			}
-			case KEY_DOWN: case 'S': {
+			case KEY_DOWN: case KEY_S: {
 				if(cursor == size-1) {
 					cursor = 0;
 				}
@@ -850,7 +1018,7 @@ void ShowMainMenu() {
 				break;
 			}
 			
-			case KEY_UP: {
+			case KEY_UP: case KEY_W: {
 				if(cursor == 0) {
 					cursor = size-1;
 				}
@@ -860,7 +1028,7 @@ void ShowMainMenu() {
 					PlaySound(TEXT("resources/menu-sfx.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NOSTOP);
 				break;
 			}
-			case KEY_DOWN: case 'S': {
+			case KEY_DOWN: case KEY_S: {
 				if(cursor == size-1) {
 					cursor = 0;
 				}
@@ -903,49 +1071,120 @@ void showProgressBar(int total, int consoleWidth) {
     }
 }
 
+void hideCursor() {
+    HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_CURSOR_INFO cursorInfo;
+    GetConsoleCursorInfo(consoleHandle, &cursorInfo);
+    cursorInfo.bVisible = FALSE; // Hide cursor
+    SetConsoleCursorInfo(consoleHandle, &cursorInfo);
+}
+
+void showCursor() {
+    HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_CURSOR_INFO cursorInfo;
+    GetConsoleCursorInfo(consoleHandle, &cursorInfo);
+    cursorInfo.bVisible = TRUE; // Show cursor
+    SetConsoleCursorInfo(consoleHandle, &cursorInfo);
+}
+
 string getSlotValue(int position) {
 	string output = "";
 	
     if (snakes.find(position) != snakes.end()) 
 	{
-		output = " S" + displayBoardColor;
+		output = string(" ") + "\033[" + SYMBOL_COLORS[0] + "m" + "S" + displayBoardColor;
 		return output;
 	}
 	
 	for(auto sn : snakes) {
 		if(sn.second == position) {
 			if(position < 10)
-				return "T";
+				return "\033[" + SYMBOL_COLORS[1] + "m" + "T";
 			else
-				return " T";
+				return string(" ") + "\033[" + SYMBOL_COLORS[0] + "m" + "T";
 		}
 	}
 	
     if (ladders.find(position) != ladders.end()) {
     	if(position < 10)
-			return "L"; // Ladder
-		else return " L";
+			return "\033[" + SYMBOL_COLORS[2] + "m" + "L"; 
+		else return string(" ") + "\033[" + SYMBOL_COLORS[2] + "m" + "L";
 	}
-    return to_string(position); // Default: number
+	
+	if(powerups.find(position) != powerups.end()) {
+		if(position < 10)
+			return "\033[" + SYMBOL_COLORS[3] + "m" + "?"; 
+		else return string(" ") + "\033[" + SYMBOL_COLORS[3] + "m" + "?";
+	}
+    return to_string(position); 
 }
 
 void FillRemainingPlayers() {
 	int size = Player.size();
 	for(int i = size; i <= MAX_PLAYERS-1; i++) {
-		Player.push_back({"", -1, "30", 0});
+		Player.push_back({"", -1, "30", false});
 	}
 }
 
-void displayBoard() {
-	// LEGEND 
-	cout << SPACE SPACE2 "Legend" << endl;
-    cout << SPACE SPACE2 << "\033[" << BORDER_COLOR << "m▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄" << RESET << endl;
-    for(const playa& p : Player) {
-    	cout << SPACE SPACE2 "\033[" << BORDER_COLOR << "m█" << setw(20) << p.name << " : " << "\033[" << p.color << "m●" << setw(15) << "\033[" << BORDER_COLOR << "m█" << RESET << endl;
-	}
-	cout << SPACE SPACE2 << "\033[" << BORDER_COLOR << "m█▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄█" << RESET << endl;
+void displayLegend() {
 	
-	cout << endl;
+	vector<playa> sortedPlayers = Player; 
+    sort(sortedPlayers.begin(), sortedPlayers.end(), [](const playa &a, const playa &b) {
+        return a.position > b.position; 
+    });
+    
+    cout << SPACE SPACE2 "Legend" << SPACE << "Special Tiles" << SPACE << "[ESC] Return to Main Menu" << endl;
+    cout << SPACE SPACE2 << "\033[" << BORDER_COLOR << "m▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄" << RESET << endl;
+
+    int maxRows = max(6, (int)sortedPlayers.size());
+
+    for (int i = 0; i < maxRows; i++) {
+        cout << SPACE SPACE2 << "\033[" << BORDER_COLOR << "m█";
+
+        if (i < sortedPlayers.size()) {
+            string positionStr = "(" + to_string(sortedPlayers[i].position) + ")";
+            int posWidth = positionStr.length();  // Get the width of the position (3 for 100)
+            cout << "\033[" << sortedPlayers[i].color << "m"
+                 << setw(20) << sortedPlayers[i].name << " : " << "● "
+                 << setw(6 - posWidth) << "" << positionStr << RESET;  // Adjust width dynamically
+        } else {
+            cout << setw(31) << " ";
+        }
+
+        cout << setw(12) << "\033[" << BORDER_COLOR << "m█";
+
+        if (i == 0) cout << "\033[" << SYMBOL_COLORS[0] << "m" << setw(18) << " S : Snake                ";    
+		else if (i == 1) cout << "\033[" << SYMBOL_COLORS[1] << "m" << setw(18) << " T : Tail                 ";
+		else if (i == 2) cout << "\033[" << SYMBOL_COLORS[2] << "m" << setw(18) << " L : Ladder               ";
+        else if (i == 3) cout << "\033[" << SYMBOL_COLORS[3] << "m" << setw(18) << " ? : Power-Up             ";
+        else if(i == 4) {
+        	int nextPlayerIndex = turnToPlay - 1;
+            int attempts = numOfPlayers;
+            
+            do {
+                nextPlayerIndex = (nextPlayerIndex + 1) % numOfPlayers;
+                attempts--;
+            } while (Player[nextPlayerIndex].completed && attempts > 0);
+            
+			cout << setw(14) << "Next Turn: ";
+            if (!Player[nextPlayerIndex].completed) {
+                cout << "\033[" << Player[nextPlayerIndex].color << "m" 
+             		<< setw(12) << Player[nextPlayerIndex].name << RESET;
+            } else {
+                cout << setw(12) << "Next Turn: -";
+            }
+		}
+        else cout << setw(17) << "                           ";
+		cout << "\033[" << BORDER_COLOR << "m" << setw(15) << "█" << RESET << endl;
+    }
+
+    cout << SPACE SPACE2 << "\033[" << BORDER_COLOR << "m█▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄█▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄█" << RESET << endl << endl;
+}
+
+
+void displayBoard() {
+	
+	//displayLegend();
 	
 	
 	//START OF BOARD
@@ -1084,7 +1323,7 @@ void displayBoard() {
 		string num_text;
 		int count = 0;
 		
-		// First, count how many players are in each slot
+		
 		map<int, vector<pair<int, string>>> slotPlayers;
 	    for (size_t i = 0; i < Player.size(); i++) {
 	        slotPlayers[Player[i].position].push_back({i, Player[i].color});
@@ -1109,10 +1348,10 @@ void displayBoard() {
 		        if (i < numPlayers)
 		            num_text += "\033[" + slotPlayers[slotNum][i].second + ";" + BOARD_BACKGROUND[usingcolor] + "m" + "●" + displayBoardColor + " " + RESET;
 		        else
-		            num_text += displayBoardColor + "  ";  // Ensure alignment by adding space
+		            num_text += displayBoardColor + "  ";  
 		    }
 		
-		    // Borders
+		   
 		    if (h == 0) {
 		        BEFORE_NUMBER_TEXT = "\033[" + BACKGROUND + ";" + BORDER_COLOR + "m" + "█" + displayBoardColor + " ";
 		        AFTER_NUMBER_TEXT = displayBoardColor + string(" ") + RESET;
@@ -1129,7 +1368,7 @@ void displayBoard() {
 		}
 		cout << endl;
 		
-		// **Players 4 - 6 (Only if needed)**
+		
 		bool secondRowNeeded = false;
 		for (auto &pair : slotPlayers) {
 		    if (pair.second.size() > 3) {
@@ -1155,14 +1394,14 @@ void displayBoard() {
 	        int slotNum = savedSlotNumbers[h];
 	        size_t numPlayers = slotPlayers[slotNum].size();
 	
-	        for (size_t i = 3; i < 6; i++) {  // Players 4 to 6
+	        for (size_t i = 3; i < 6; i++) {  
 	            if (i < numPlayers)
 	                num_text += "\033[" + slotPlayers[slotNum][i].second + ";" + BOARD_BACKGROUND[usingcolor] + "m" + "●" + displayBoardColor + " " + RESET;
 	            else
-	                num_text += displayBoardColor + "  "; // Empty space for alignment
+	                num_text += displayBoardColor + "  "; 
 	        }
 	
-	        // Borders
+	        
 	        if (h == 0) {
 	            BEFORE_NUMBER_TEXT = "\033[" + BACKGROUND + ";" + BORDER_COLOR + "m█" + displayBoardColor + " ";
 	            AFTER_NUMBER_TEXT = displayBoardColor + string(" ") + RESET;
