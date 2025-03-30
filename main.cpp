@@ -190,6 +190,7 @@ void ShowMainMenu();
 int getConsoleWidth();
 void SelectPlayers();
 void HowToPlay();
+void displayMenuArt();
 void Pause(int ms);
 void AboutPage();
 void showProgressBar(int total, int consoleWidth);
@@ -874,13 +875,102 @@ void SelectPlayers() {
 }
 
 
-void HowToPlay() {
+void HowToPlay();
+void displayMenuArt();
+
+
+void HowToPlay() { //THIS IS DONE UNLESS THERE ARE CHANGES IN THE POWERUPS AND HOW THE GAMEPLAY CHANGES, WILL TWEAK IT IF THERE ARE ANY CHANGES
 	system("cls");
 	LogoArt();
-	
-	cout << "How TO Play";
-	_getch();
+    cout << SPACE SPACE2 "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄\n";
+    cout << SPACE SPACE2 "                               🎲 SNAKE AND LADDER 🎲                      \n";
+    cout << SPACE SPACE2 "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄\n\n";
+
+    cout << SPACE SPACE2 "Welcome to the exciting game of Snake and Ladder with Power-Ups!\n\n";
+
+    cout << SPACE SPACE2 "📜 HOW TO PLAY: \n";
+    cout << SPACE SPACE2 "1. Each player takes turns rolling the dice by pressing a key.\n";
+    cout << SPACE SPACE2 "2. The number rolled on the dice determines how many spaces the player moves\n";
+	cout << SPACE SPACE2 "   forward.\n";
+    cout << SPACE SPACE2 "3. Landing on the bottom of a ladder (L) will instantly move you up to a higher\n"; 
+	cout << SPACE SPACE2 "   space. Ladders are your friends!\n";
+    cout << SPACE SPACE2 "4. Landing on the head of a snake (S) will send you sliding down to a lower space.\n";
+	cout << SPACE SPACE2 "   Watch out for those sneaky snakes!\n";
+    cout << SPACE SPACE2 "5. If you land on a Power-Up (?) space, a random effect will trigger, which can\n";
+	cout << SPACE SPACE2 "   help or hinder your progress.\n";
+    cout << SPACE SPACE2 "6. The first player to reach exactly square 100 wins the game. If the dice roll\n";
+	cout << SPACE SPACE2 "   exceeds 100, you bounce back the extra spaces.\n\n";
+
+    cout << SPACE SPACE2 "✨ LEGEND: \n";
+    cout << SPACE SPACE2 "S = Snake (Move Down)\n";
+    cout << SPACE SPACE2 "L = Ladder (Move Up)\n";
+    cout << SPACE SPACE2 "? = Power-Up (Random Effect)\n";
+    cout << SPACE SPACE2 "● = Player (Each dot color represents a different player)\n\n";
+
+    cout << SPACE SPACE2 "🧿 POWER-UP EFFECTS: \n";
+    cout << SPACE SPACE2 "- 🎲 Extra Turn: Roll the dice again and advance further.\n";
+    cout << SPACE SPACE2 "- 🔄 Swap: Switch positions with a random player. This could give you a massive\n";
+	cout << SPACE SPACE2 "          advantage or set you back!\n";
+    cout << SPACE SPACE2 "- 🛡️ Shield: Protect yourself from the next snake you encounter.\n";
+    cout << SPACE SPACE2 "- 🚀 Boost: Move forward a few extra spaces.\n";
+    cout << SPACE SPACE2 "- ⏪ Reverse: Force another player to move backward.\n\n";
+
+    cout << SPACE SPACE2 "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄\n";
+    cout << SPACE SPACE2 "                             Press any key to return...        \n";
+    cout << SPACE SPACE2 "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄\n";
+
+    _getch();
 	STATUS = MAINMENU;
+}
+
+void displayMenuArt() { // ADDED THIS, ASCII ART ON TOP, THE CODE BREAKS IF I ADD IT IN THE SHOWMAINMENU
+    string startGameText = R"(
+		███████╗████████╗ █████╗ ██████╗ ████████╗     ██████╗  █████╗ ███╗   ███╗███████╗
+		██╔════╝╚══██╔══╝██╔══██╗██╔══██╗╚══██╔══╝    ██╔════╝ ██╔══██╗████╗ ████║██╔════╝
+		███████╗   ██║   ███████║██████╔╝   ██║       ██║  ███╗███████║██╔████╔██║█████╗  
+		╚════██║   ██║   ██╔══██║██╔══██╗   ██║       ██║   ██║██╔══██║██║╚██╔╝██║██╔══╝  
+		███████║   ██║   ██║  ██║██║  ██║   ██║       ╚██████╔╝██║  ██║██║ ╚═╝ ██║███████╗
+		╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝        ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝
+	)";
+
+    string howToPlayText = R"(
+		██╗  ██╗ ██████╗ ██╗    ██╗    ████████╗ ██████╗     ██████╗ ██╗      █████╗ ██╗   ██╗
+		██║  ██║██╔═══██╗██║    ██║    ╚══██╔══╝██╔═══██╗    ██╔══██╗██║     ██╔══██╗╚██╗ ██╔╝
+		███████║██║   ██║██║ █╗ ██║       ██║   ██║   ██║    ██████╔╝██║     ███████║ ╚████╔╝ 
+		██╔══██║██║   ██║██║███╗██║       ██║   ██║   ██║    ██╔═══╝ ██║     ██╔══██║  ╚██╔╝  
+		██║  ██║╚██████╔╝╚███╔███╔╝       ██║   ╚██████╔╝    ██║     ███████╗██║  ██║   ██║   
+		╚═╝  ╚═╝ ╚═════╝  ╚══╝╚══╝        ╚═╝    ╚═════╝     ╚═╝     ╚══════╝╚═╝  ╚═╝   ╚═╝   
+    )";
+
+    string aboutText = R"(
+		 █████╗ ██████╗  ██████╗ ██╗   ██╗████████╗
+		██╔══██╗██╔══██╗██╔═══██╗██║   ██║╚══██╔══╝
+		███████║██████╔╝██║   ██║██║   ██║   ██║   
+		██╔══██║██╔══██╗██║   ██║██║   ██║   ██║   
+		██║  ██║██████╔╝╚██████╔╝╚██████╔╝   ██║   
+		╚═╝  ╚═╝╚═════╝  ╚═════╝  ╚═════╝    ╚═╝   
+	)";
+
+    cout << SPACE2 "Choose an Option:";
+
+    istringstream startStream(startGameText);
+    string line;
+    while (getline(startStream, line)) {
+        cout << SPACE2 << line << endl;
+    }
+    cout << endl;
+
+    istringstream howToPlayStream(howToPlayText);
+    while (getline(howToPlayStream, line)) {
+        cout << SPACE2 << line << endl;
+    }
+    cout << endl;
+
+    istringstream aboutStream(aboutText);
+    while (getline(aboutStream, line)) {
+        cout << SPACE2 << line << endl;
+    }
+    cout << endl;
 }
 
 void LogoArt() {
@@ -1347,4 +1437,3 @@ void setConsoleSize(int width, int height) {
 }
 
 //------------------------------------------------------------------------
-
