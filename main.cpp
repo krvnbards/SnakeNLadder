@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <sstream>
 #include <windows.h>
+#include <mmsystem.h>
 #include <conio.h>
 #include <thread>
 #include <limits>
@@ -101,14 +102,18 @@ string BORDER_COLOR = "37";
 			// WHITE BG BLACK TEXT         // BRIGHT RED BG BLACK TEXT
 	
 // SA BOARD SETTINGS NI		
-string BOARD_BACKGROUND[] = {"106", "103"};
+string BOARD_BACKGROUND[] = {"106", "103"}; // 106 103 = YELLOW CYAN      101 107 = RED WHITE
 string alt_color[] = {"\033[" + string("30") + ";" + BOARD_BACKGROUND[0] + "m", "\033[" + string("30") + ";"+ BOARD_BACKGROUND[1] + "m"};
 string SYMBOL_COLORS[] = {"31", "33", "32", "36"}; // Snake Tail Ladder Special(POWERUP)
 
 string TEXT_COLOR = "30";
 
 // MENU HIGHLIGHT
-string HIGHLIGHT = "\033[103;30m";
+string HIGHLIGHT_BG = "103";
+string HIGHLIGHT_FG = "30";
+string HIGHLIGHT = "\033[" + HIGHLIGHT_BG + ";" + HIGHLIGHT_FG + "m";
+
+string POWER_UPS[] = {"Extra Roll", "Boost", "Slow Down", "Teleport", "Snake Repellent", "Shield"};
 
 //[-------------------------------VARIABLES-------------------------------]
 const int MAX_PLAYERS = 6;
@@ -133,19 +138,22 @@ int enableLoading = 0;
 int enableSFX = 1;
 int autoPause = 0;
 int enableAnimations = 1;
+int bgmEnabled = 1;
 
 int name_position = 1;
 int color_position = 1;
 int selectingPlayer = -1;
 
+bool extraRoll = false;
+
 unordered_map<int, int> snakes = {
-    {99, 7},  {56, 15}, {47, 20}, {88, 24}, {94, 45}, 
+    {99, 21},  {56, 15}, {47, 20}, {88, 24}, {94, 45}, 
     {78, 37}, {82, 59}, {67, 29}, {35, 5},  {14, 4},  
     {19, 8},  {23, 2},  {31, 9}
 };
 
 unordered_map<int, int> ladders = {
-    {3, 22},  {6, 25},  {11, 40}, {60, 85}, {17, 33}, 
+    {3, 22},  {6, 25},  {11, 40}, {60, 85}, {18, 33}, 
     {27, 50}, {44, 66}, {53, 74}, {63, 81}, {72, 91}
 };
 
@@ -176,6 +184,7 @@ enum stat_list {
 	GAME_ENTERNAME,
 	GAME_STARTED,
 	SELECT_PLAYER_COLOR,
+	EXIT_GAME,
 };
 
 enum stat_list STATUS = MAINMENU;
@@ -191,6 +200,7 @@ void ShowMainMenu();
 int getConsoleWidth();
 void SelectPlayers();
 void HowToPlay();
+void displayMenuArt();
 void Pause(int ms);
 void AboutPage();
 void showProgressBar(int total, int consoleWidth);
@@ -202,6 +212,20 @@ void ClearGame();
 void showCursor();
 void hideCursor();
 void displayLegend();
+void playHopSound();
+void PlayBackgroundMusic();
+void movePlayerAnimation(int playerIndex, int targetPosition, bool forward, bool isTeleport);
+void handleLadderOrSnake(int playerIndex);
+void slowDownOpponent(int player);
+void applyPowerUp(int player);
+void movePlayer(int player, int roll);
+void announceWinner(int player);
+bool checkGameOver();
+void clearScreen();
+int getNextPlayer(int currentPlayer);
+void ForPlayingArt();
+void ThankyouArt();
+void ExitGame();
 //------------------------------------------------------------------------
 
 int main()
@@ -221,8 +245,9 @@ int main()
     cout << "\n\n" << RESET;
     
     system(charColor);
+    hideCursor();
 	
-	system("cls");
+	clearScreen();
 	srand(time(0));
     
     if(enableLoading == 1) {
@@ -246,6 +271,8 @@ int main()
 	    cout << "\n\n\n\n\n\n\n\n\n\n\n\n" SPACE SPACE "        LOADING GAME...\n"; 
 	    showProgressBar(100, consoleWidth);
 	}
+	PlayBackgroundMusic();
+	bgmEnabled = 1;
 	while(1) { // GAME IS RUNNING
 		switch(STATUS) {
 			case MAINMENU: {
@@ -280,6 +307,10 @@ int main()
 				StartGame();
 				break;
 			}
+			case EXIT_GAME: {
+				ExitGame();
+				return 0;
+			}
 		}
 	}
     return 0;
@@ -291,7 +322,7 @@ void EnterName() {
 	int colorIndex = 0;
 	bool proceed=true;
 	for(int i = name_position; i <= numOfPlayers; i++) {
-		system("cls");
+		clearScreen();
 		LogoArt();
 		
 		cout << endl << endl;
@@ -362,7 +393,7 @@ void EnterName() {
 	    }
 	
 		
-		Player.push_back({names, 95, assignedColor, false});
+		Player.push_back({names, 0, assignedColor, false});
 		name_position++;
 	}
 	
@@ -372,11 +403,44 @@ void EnterName() {
 		name_position = -1;
 		return;
 	}
-	system("cls");
+	clearScreen();
 	LogoArt();
 	name_position = 1;
 	color_position = 1;
 	STATUS = SELECT_COLORS;
+}
+
+void announceWinner(int player) {
+    cout << SPACE SPACE2 << "\033[" << Player[player].color << "m" 
+         << Player[player].name << RESET << " has reached 100 and WON the game!" << endl;
+    _getch();
+    Player[player].completed = true;
+}
+
+bool checkGameOver() {
+    int remainingPlayers = 0;
+    for (int i = 0; i < numOfPlayers; i++) {
+        if (!Player[i].completed) remainingPlayers++;
+    }
+    if (remainingPlayers <= 1) {
+        cout << SPACE SPACE2 << "\033[1;31mGame Over! Returning to main menu...\n" << RESET;
+        _getch();
+        ClearGame();
+        STATUS = MAINMENU;
+        return true;
+    }
+    return false;
+}
+
+int getNextPlayer(int currentPlayer) {
+    int nextPlayer = currentPlayer;
+    int attempts = numOfPlayers;
+    do {
+        nextPlayer = (nextPlayer + 1) % numOfPlayers;
+        attempts--;
+    } while (Player[nextPlayer].completed && attempts > 0);
+    
+    return nextPlayer;
 }
 
 void diceArt(int number) {
@@ -444,6 +508,87 @@ void diceArt(int number) {
     }
 }
 
+void PlayBackgroundMusic() {
+    mciSendString("open \"resources/background-music.mp3\" type mpegvideo alias bgm", NULL, 0, NULL);
+    mciSendString("setaudio bgm volume to 500", NULL, 0, NULL); // Volume range: 0 (mute) to 1000 (max)
+    mciSendString("play bgm repeat", NULL, 0, NULL); // Repeat to loop continuously
+}
+
+void StopBGM() {
+    mciSendString("stop bgm", NULL, 0, NULL); // Repeat to loop continuously
+}
+
+void playSound(int type) {
+	if(enableSFX) {
+		if(type == 1){ // hop
+		
+			mciSendString("stop hop", NULL, 0, NULL);
+    		mciSendString("close hop", NULL, 0, NULL);
+    		
+			mciSendString("open resources/hop-sfx.wav alias hop", NULL, 0, NULL);
+    		mciSendString("play hop", NULL, 0, NULL);
+		}
+		else if(type == 2){ // menu switch
+		
+			mciSendString("stop menu", NULL, 0, NULL);
+    		mciSendString("close menu", NULL, 0, NULL);
+    		
+			mciSendString("open resources/Retro12.wav alias menu", NULL, 0, NULL);
+    		mciSendString("play menu", NULL, 0, NULL);
+		}
+		else if(type == 3){ // ladder
+		
+			mciSendString("stop hit", NULL, 0, NULL);
+    		mciSendString("close hit", NULL, 0, NULL);
+    		
+			mciSendString("open resources/orch-hit.wav alias hit", NULL, 0, NULL);
+    		mciSendString("play hit", NULL, 0, NULL);
+		}
+		else if(type == 4){ // ladder
+		
+			mciSendString("stop trombone", NULL, 0, NULL);
+    		mciSendString("close trombone", NULL, 0, NULL);
+    		
+			mciSendString("open resources/sad-trombone.wav alias trombone", NULL, 0, NULL);
+    		mciSendString("play trombone", NULL, 0, NULL);
+		}
+		else if(type == 6){ // victory
+		
+			mciSendString("stop victory", NULL, 0, NULL);
+    		mciSendString("close victory", NULL, 0, NULL);
+    		
+			mciSendString("open \"resources/goodresult.mp3\" type mpegvideo alias victory", NULL, 0, NULL);
+    		mciSendString("play victory", NULL, 0, NULL);
+		}
+		else if(type == 7){ // enter
+		
+			mciSendString("stop menu", NULL, 0, NULL);
+    		mciSendString("close menu", NULL, 0, NULL);
+    		
+			mciSendString("open resources/Retro11.wav alias menu", NULL, 0, NULL);
+    		mciSendString("play menu", NULL, 0, NULL);
+		}
+		else if(type == 8){ // enter
+		
+			mciSendString("stop dice", NULL, 0, NULL);
+    		mciSendString("close dice", NULL, 0, NULL);
+    		
+			mciSendString("open resources/dice.wav alias dice", NULL, 0, NULL);
+    		mciSendString("play dice", NULL, 0, NULL);
+		}
+		else if(type == 9){ // enter
+		
+			mciSendString("stop tp", NULL, 0, NULL);
+    		mciSendString("close tp", NULL, 0, NULL);
+    		
+			mciSendString("open \"resources/teleport.mp3\" type mpegvideo alias tp", NULL, 0, NULL);
+    		mciSendString("play tp", NULL, 0, NULL);
+		}
+	}
+}
+
+
+
 void ClearGame() {
 	turnToPlay = -1;
 	numOfPlayers = 0;
@@ -468,6 +613,31 @@ void rollDiceAnimation() {
     }
 }
 
+void rollPowerUps() {
+    srand(time(0));
+    //int revealAt = rand() % 3 + 3;
+
+    for (int i = 0; i < 5; ++i) {
+        int randomFace = rand() % 7;
+        //cout << "\033[H\033[J";
+        //cout << SPACE SPACE2 "Rolling the dice...\n";
+		
+		//cout << "\033[1A"; // Move the cursor up 7 lines
+        
+        cout << "\r" << SPACE SPACE2 << "\033[J" << "\033[" << SYMBOL_COLORS[3] << "m" << POWER_UPS[randomFace] << RESET;
+        
+        int delay = rand() % 300 + 500;
+        this_thread::sleep_for(chrono::milliseconds(delay));
+    }
+}
+
+int revealPowerUp() {
+	int finalPower = rand() % 4;
+	Pause(1000);
+	cout << "\r" << SPACE SPACE2 << "\033[J" << "You gained the power up: " << "\033[" << SYMBOL_COLORS[3] << "m" << POWER_UPS[finalPower] << RESET << endl;
+	return finalPower;
+}
+
 int revealFinalDice() {
     int finalNumber = rand() % 6 + 1;
     //cout << "\033[H\033[J";
@@ -479,207 +649,298 @@ int revealFinalDice() {
     return finalNumber;
 }
 
-void StartGame() {
-	turnToPlay = 1; // first Player
-	while(true) {
-		system("cls");
-		LogoArt();
-		displayLegend();
-		cout << "\033[1A";
-		cout << "\033[s";
-		cout << "\n";
-		displayBoard();
-		
-		int player = turnToPlay-1;
-		
-		cout << endl << SPACE SPACE2 << "\033[" << Player[player].color << "m" << Player[player].name << RESET << ", press Enter to roll the dice!" << endl << SPACE SPACE2;
-		char input;
-		int confirm=-1;
-		while(1) {
-			FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
-			input = _getch();
-			input = tolower(input);
-			if(input == KEY_ESC) {
-				cout << "Do you want to return to main menu? (y/n)?: " << endl;
-				char input2;
-				while(1) {
-					FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
-					input2 = _getch();
-					input2 = tolower(input2);
-					if(input2 == 'Y' || input2 == 'y') {
-						confirm = 1;
-						break;
-					}
-					else if(input2 == 'N' || input2 == 'n') {
-						confirm = 0;
-						break;	
-					}
-				
-					continue;
-				}
-				if(confirm == 0) {
-					cout << endl << SPACE SPACE2 << "\033[" << Player[player].color << "m" << Player[player].name << RESET << ", press Enter to roll the dice!" << endl << SPACE SPACE2;
-					continue;
-				}
-			}
-			
-			if(confirm == 1)
-				break;
-			
-			if(input == KEY_ENTER) {
-				break;
-			}
-			
-			
-			continue;
-		}
-		
-		if(confirm == 1)
-		{
-			STATUS = MAINMENU;
-			cout << SPACE SPACE2 << "Returning to main menu... " << endl;
-			ClearGame();
-			Pause(800);
-			return;
-		}
-		
-		cout << "Rolling the dice...\n" << "\033[" << Player[player].color << "m";
-		rollDiceAnimation();
-		//Pause(800);
-		cout << "\033[8A\033[J";
-        int randomNum = revealFinalDice();
-		
-		cout << RESET;
-	
-		Pause(800);
-		
-		int start = 0;
-		if(enableAnimations == 1)
-		{
-			cout << SPACE SPACE2 << "Press any key to start moving!";
-			FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
-			_getch();
-			
-			int finalPos = Player[player].position + randomNum;
-		
-			hideCursor();
-			while (Player[player].position < 100 && Player[player].position < finalPos) { 
-			    Player[player].position++;
-			    cout << "\033[u";
-			    displayBoard();
-			    fflush(stdout);
-			    Pause(200);
-			}
-			
-			// If finalPos exceeds 100, start bouncing back
-			if (finalPos > 100) {
-			    int excess = finalPos - 100;  // Extra steps beyond 100
-			
-			    while (excess > 0) { 
-			        Player[player].position--;
-			        excess--;
-			        cout << "\033[u";
-			        displayBoard();
-			        fflush(stdout);
-			        Pause(200);
-			    }
-			}
-			
-			finalPos = Player[player].position;
-				
-			if (ladders.find(finalPos) != ladders.end()) {
-		        int ladderEnd = ladders[finalPos]; 
-		
-		        cout << SPACE SPACE2 << "\033[" << Player[player].color << "m" << Player[player].name << RESET << ", has stepped on a \033[" << SYMBOL_COLORS[2] << "mLADDER! +" << ladderEnd - finalPos << RESET << ".";
-		        _getch();
-		        hideCursor();
-		        while (Player[player].position < ladderEnd) {
-		            Player[player].position += 2;  
-		            if (Player[player].position > ladderEnd) {
-		                Player[player].position = ladderEnd; 
-		            }
-		            cout << "\033[u";
-		            displayBoard();
-		            
-		            fflush(stdout);
-		            Pause(200); 
-		        }
-		        showCursor();
-		    }
-		    else if (snakes.find(finalPos) != snakes.end()) {
-		        int snakeTail = snakes[finalPos]; 
-		
-		        
-		        cout << SPACE SPACE2 << "\033[" << Player[player].color << "m" << Player[player].name << RESET << ", has stepped on a \033[" << SYMBOL_COLORS[0] << "mSNAKE! -" << snakeTail - finalPos << RESET << ".";
-		        _getch();
-		        hideCursor();
-		        while (Player[player].position > snakeTail) {
-		            Player[player].position -= 2;  
-		            if (Player[player].position < snakeTail) {
-		                Player[player].position = snakeTail; 
-		            }
-		            cout << "\033[u";
-		            displayBoard();
-		            fflush(stdout);
-		            Pause(200);  
-		        }
-		        showCursor();
-	    	}
-	    	else if (powerups.find(Player[player].position) != powerups.end()) {
-			    // Player landed on a power-up tile.
-			    // Do nothing for now.
-			}
-			
-			if (Player[player].position == 100) {
-			    cout << SPACE SPACE2 << "\033[" << Player[player].color << "m" << Player[player].name 
-			         << RESET << " has reached **100** and **WON** the game! 🎉";
-			    _getch();
-			    Player[player].completed = true; 
-			    return;
-			}
-			
-			int activePlayers = 0;
-			for (int i = 0; i < numOfPlayers; i++) {
-			    if (!Player[i].completed) {
-			        activePlayers++;
-			    }
-			}
-			
-			// If only one player remains, the game ends
-			if (activePlayers == 1) {
-			    cout << SPACE SPACE2 << "All players have completed the game! The game is over." << endl;
-			    _getch();
-			    return;
-			}
+void movePlayer(int player, int roll) {
+    int finalPos = Player[player].position + roll;
 
-			int attempts = numOfPlayers;
-			do {
-			    turnToPlay = (turnToPlay) % numOfPlayers;  // Ensure index stays within bounds
-			    attempts--;
-			} while (Player[turnToPlay].completed && attempts > 0);  // Skip completed players
-			turnToPlay++;
-		}
-		else {
-			Player[player].position += randomNum;
-		}
-		
-		if(turnToPlay == numOfPlayers) {
-		    turnToPlay = 1;
-		} else {
-		    turnToPlay++;
-		}
-		
-		while (Player[turnToPlay - 1].completed == true) {
-		    turnToPlay++;
-		    if (turnToPlay > numOfPlayers) {
-		        turnToPlay = 1;
-		    }
-		}
+    // Handle board boundaries
+    if (finalPos > 100) {
+        int excess = finalPos - 100;
+        finalPos = 100 - excess;
+    }
+
+    // Animate movement
+    cout << SPACE SPACE2 << "\033[" << Player[player].color << "m" << Player[player].name
+         << RESET << " moves " << roll << " spaces forward!" << endl;
+    _getch();
+    
+    movePlayerAnimation(player, finalPos, true, false);
+	
+    // Check if landed on a snake, ladder, or power-up
+    handleLadderOrSnake(player);
+    
+
+    if (powerups.find(Player[player].position) != powerups.end()) {
+        // Player landed on a power-up
+        applyPowerUp(player);
+    }
+}
+
+void teleportPlayer(int playerIndex) {
+    int minMove = 5; // Minimum forward move
+    int maxMove = 20; // Maximum forward move
+    int newPos = Player[playerIndex].position + (rand() % (maxMove - minMove + 1) + minMove);
+
+    if (newPos > 100) newPos = 100; // Ensure it doesn't exceed the last tile
+
+    // Avoid teleporting to a snake's head
+    while (snakes.find(newPos) != snakes.end()) {
+        newPos--;
+    }
+    
+    cout << "\033[" << SYMBOL_COLORS[4] << "mTELEPORT! "<< RESET << Player[playerIndex].name << " activated a teleport power-up! --> " << newPos << endl;
+    _getch();
+
+    movePlayerAnimation(playerIndex, newPos, true, true);
+    handleLadderOrSnake(playerIndex); // Check for further movement from ladder/snake
+}
+
+void applyPowerUp(int player) {
+    cout << SPACE SPACE2 << "\033[" << Player[player].color << "m" << Player[player].name 
+         << RESET << ", has stepped on a \033[" << SYMBOL_COLORS[3] << "mPOWERUP!" << RESET << "." << endl;
+
+    cout << SPACE SPACE2 << "\033[JRolling power-ups..." << endl;
+    rollPowerUps();
+    int power = revealPowerUp();
+
+    if (power == 0) { // Extra Roll
+        cout << SPACE SPACE2 << "\033[" << SYMBOL_COLORS[3] 
+             << "mYou will be able to roll the dice again!" << RESET << endl;
+    } 
+    else if (power == 1) { // Boost (+5 Spaces)
+        int boostAmount = 2;
+        int finalPos = Player[player].position + boostAmount;
+        if (finalPos > 100) finalPos = 100 - (finalPos - 100);
+
+        cout << SPACE SPACE2 << "\033[" << SYMBOL_COLORS[3] 
+             << "mYou will move +" << boostAmount << " extra spaces forward!" << RESET << endl;
+        _getch();
+
+        movePlayerAnimation(player, finalPos, true, false);
+        handleLadderOrSnake(player);
+    } 
+    else if (power == 2) { // Slow Down (Opponent moves -3)
+        slowDownOpponent(player);
+    }
+    else if(power == 3) {
+    	teleportPlayer(player);
 	}
 }
 
+void slowDownOpponent(int player) {
+    cout << SPACE SPACE2 << "\033[" << SYMBOL_COLORS[3] 
+         << "mChoose an opponent to move -3 spaces backward." << RESET << endl;
+
+    cout << SPACE SPACE2 << "Player list:" << endl;
+    
+    int cursor = 0, movesBackward = 3;
+    vector<int> validPlayerIndices;
+
+    // Get valid players
+    for (int i = 0; i < numOfPlayers; i++) {
+        if (!Player[i].completed && Player[i].name != Player[player].name) {
+            validPlayerIndices.push_back(i);
+        }
+    }
+
+    int count = validPlayerIndices.size();
+    int times=0;
+    while (true) {
+    	if(times > 0) {
+    		cout << "\033[" << to_string(count+1) << "A";
+			cout << "\n\033[J";  // Move cursor up and clear only necessary lines
+		}
+        
+        times++;
+        for (int i = 0; i < count; i++) {
+            if (i == cursor)
+                cout << HIGHLIGHT << SPACE SPACE2 << " > \033[" << Player[validPlayerIndices[i]].color 
+                     << "m" << Player[validPlayerIndices[i]].name << HIGHLIGHT << "\033[K" << RESET << endl;
+            else
+                cout << SPACE SPACE2 << RESET << "\033[" << Player[validPlayerIndices[i]].color 
+                     << "m" << Player[validPlayerIndices[i]].name << RESET << endl;
+        }
+
+        FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
+        char input = _getch();
+        switch (input) {
+            case KEY_ENTER: {
+            	playSound(7);
+                showCursor();
+                int selectedIndex = validPlayerIndices[cursor];
+
+                // **Move back step by step (without clearing screen)**
+                int finalPos = max(1, Player[selectedIndex].position - movesBackward);
+                
+                hideCursor();
+                while (Player[selectedIndex].position > finalPos) {
+                    Player[selectedIndex].position--;  // Move one step at a time
+                    cout << "\033[u";  // Move cursor back to saved position
+                    displayBoard();  // Redraw board without clearing screen
+                    if (enableSFX) playSound(1);
+                    fflush(stdout);
+                    Pause(200);
+                }
+                showCursor();
+
+                // Handle ladder or snake after moving back
+                handleLadderOrSnake(selectedIndex);
+                return;
+            }
+            case KEY_UP: case KEY_W: case 'w': cursor = (cursor == 0) ? count - 1 : cursor - 1; break;
+            case KEY_DOWN: case KEY_S: case 's': cursor = (cursor == count - 1) ? 0 : cursor + 1; break;
+        }
+        if (enableSFX) playSound(2);
+    }
+}
+
+void movePlayerAnimation(int playerIndex, int finalPos, bool forward, bool isTeleport = false) {
+	
+	if (isTeleport) {
+        Player[playerIndex].position = finalPos;
+        playSound(9); 
+        cout << "\033[u";
+        displayBoard();
+        return;
+    }
+    
+    hideCursor();
+    int currentPosition = Player[playerIndex].position;
+    int distance = abs(finalPos - currentPosition);
+
+    // Dynamically adjust step size based on distance
+    int stepSize = (distance > 15) ? 5 : (distance > 8) ? 3 : 1;
+
+    while (currentPosition != finalPos) {
+        if (forward) {
+            currentPosition += stepSize;
+            if (currentPosition > finalPos) currentPosition = finalPos;
+        } else {
+            currentPosition -= stepSize;
+            if (currentPosition < finalPos) currentPosition = finalPos;
+        }
+
+        Player[playerIndex].position = currentPosition;
+
+        // Refresh display without clearing the whole screen
+        cout << "\033[u"; // Move cursor up
+        displayBoard();
+        if (enableSFX) playSound(1); // Step sound
+
+        fflush(stdout);
+        Pause(200); // Delay for animation
+    }
+}
+
+void handleLadderOrSnake(int playerIndex) {
+    int pos = Player[playerIndex].position;
+
+    if (ladders.find(pos) != ladders.end()) {
+        int ladderEnd = ladders[pos];
+        playSound(3);
+        cout << SPACE SPACE2 << "\033[" << Player[playerIndex].color << "m" << Player[playerIndex].name
+             << RESET << ", has stepped on a \033[" << SYMBOL_COLORS[2] << "mLADDER! -->" 
+             << ladderEnd << RESET << "." << endl;
+        _getch();
+        movePlayerAnimation(playerIndex, ladderEnd, true, false);
+    } 
+    else if (snakes.find(pos) != snakes.end()) {
+        int snakeTail = snakes[pos];
+        playSound(4);
+        cout << SPACE SPACE2 << "\033[" << Player[playerIndex].color << "m" << Player[playerIndex].name
+             << RESET << ", has stepped on a \033[" << SYMBOL_COLORS[0] << "mSNAKE! -->" 
+             << snakeTail << RESET << "." << endl;
+        _getch();
+        movePlayerAnimation(playerIndex, snakeTail, false, false);
+    }
+}
+
+void clearScreen() {
+	cout << "\033[H\033[J";
+}
+
+bool promptRoll(int player) {
+    cout << endl << SPACE SPACE2 << "\033[" << Player[player].color << "m" 
+         << Player[player].name << RESET << ", press Enter to roll the dice!" << endl << SPACE SPACE2;
+    
+    while (true) {
+        FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
+        char input = _getch();
+        input = tolower(input);
+
+        if (input == KEY_ESC) {
+            cout << SPACE SPACE2 << "Do you want to return to the main menu? (y/n): ";
+            while (true) {
+                char input2 = _getch();
+                input2 = tolower(input2);
+                if (input2 == 'y') return false;
+                if (input2 == 'n') break;  
+            }
+            cout << endl << SPACE SPACE2 << "\033[" << Player[player].color << "m" 
+                 << Player[player].name << RESET << ", press Enter to roll the dice!" << endl << SPACE SPACE2;
+        }
+        
+        if(input == 'm') {
+        	if(bgmEnabled) {
+        		StopBGM();
+        		bgmEnabled = 0;
+        		cout  << "Background music has been disabled.";
+        		Pause(950);
+        		cout << "\r\033[J";
+			}
+			else {
+				PlayBackgroundMusic();
+				cout << "Background music has been enabled.";
+				Pause(950);
+				cout << "\r\033[J";
+			    bgmEnabled = 1;		
+			}
+		}
+
+        if (input == KEY_ENTER) return true; 
+    }
+}
+
+void StartGame() {
+    turnToPlay = 0; // First player
+    while (true) {
+        // Clear screen and display game state
+        clearScreen();
+        LogoArt();
+        displayLegend();
+        cout << "\033[1A\033[s\n";
+        displayBoard();
+
+        int player = turnToPlay;
+        bool extraRoll = false;
+
+        // Prompt player to roll the dice
+        if (!promptRoll(player)) {
+            STATUS = MAINMENU;
+            ClearGame();
+            return;
+        }
+
+		playSound(8);
+        // Roll and reveal dice
+        cout << "\033[1A\r\033[J\033[" << Player[player].color << "m";
+        
+        rollDiceAnimation();
+        cout << "\033[7A\033[J";
+        int roll = revealFinalDice();
+        movePlayer(player, roll);
+
+        if (Player[player].position == 100) {
+            announceWinner(player);
+            if (checkGameOver()) return;
+        }
+
+        // Switch turn unless player gets an extra roll
+        turnToPlay = extraRoll ? player : getNextPlayer(turnToPlay);
+    }
+}
+
 void SelectPlayerColor() {
-	system("cls");
+	clearScreen();
 	LogoArt();
 
 	int sizedt = 0;
@@ -712,7 +973,7 @@ void SelectPlayerColor() {
 		
     int cursor = 0;
 	while(1) {
-		system("cls");
+		clearScreen();
 		LogoArt();
 
 		cout << SPACE SPACE SPACE1 "Choose available colors for " << Player[player].name << ":\n";
@@ -728,6 +989,7 @@ void SelectPlayerColor() {
 		switch(input) {
 			case KEY_ENTER: 
 			{
+				playSound(7);
 				if(cursor == 0) {
 					selectingPlayer = -1;
 					STATUS=SELECT_COLORS;
@@ -748,17 +1010,17 @@ void SelectPlayerColor() {
 					
 			}
 			
-			case KEY_UP: case KEY_W: {
+			case KEY_UP: case KEY_W: case 'w': {
 				if(cursor == 0) {
 					cursor = sizedt;
 				}
 				else cursor--;
 				
 				if(enableSFX)
-					PlaySound(TEXT("resources/menu-sfx.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NOSTOP);
+					playSound(2);
 				break;
 			}
-			case KEY_DOWN: case 'S': 
+			case KEY_DOWN: case 'S': case 's': 
 			{
 				if(cursor == sizedt) {
 					cursor = 0;
@@ -766,7 +1028,7 @@ void SelectPlayerColor() {
 				else cursor++;
 				
 				if(enableSFX)
-						PlaySound(TEXT("resources/menu-sfx.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NOSTOP);
+						playSound(2);
 				break;
 			}
 		}
@@ -775,7 +1037,7 @@ void SelectPlayerColor() {
 }
 
 void SelectColors() {
-	system("cls");
+	clearScreen();
 	LogoArt();
 	
 	cout << SPACE SPACE SPACE1 "Choose a color for each player:\n";
@@ -793,7 +1055,7 @@ void SelectColors() {
 	
 	int cursor = 0;
 	while(true) {
-		system("cls");
+		clearScreen();
 		LogoArt();
 		
 		cout << SPACE SPACE SPACE1 "Choose a color for each player or Start the game:\n";
@@ -809,6 +1071,7 @@ void SelectColors() {
 		switch(input) {
 			case KEY_ENTER: 
 			{
+				playSound(7);
 				switch(cursor) 
 				{
 					case 0: {
@@ -830,24 +1093,24 @@ void SelectColors() {
 				break;
 			}
 			
-			case KEY_UP: case KEY_W: {
+			case KEY_UP: case KEY_W: case 'w': {
 				if(cursor == 0) {
 					cursor = size+1;
 				}
 				else cursor--;
 				
 				if(enableSFX)
-					PlaySound(TEXT("resources/menu-sfx.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NOSTOP);
+					playSound(2);
 				break;
 			}
-			case KEY_DOWN: case KEY_S: {
+			case KEY_DOWN: case KEY_S: case 's': {
 				if(cursor == size+1) {
 					cursor = 0;
 				}
 				else cursor++;
 				
 				if(enableSFX)
-						PlaySound(TEXT("resources/menu-sfx.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NOSTOP);
+					playSound(2);
 				break;
 			}
 		}
@@ -855,7 +1118,7 @@ void SelectColors() {
 }
 
 void AboutPage() {
-	system("cls");
+	clearScreen();
 	LogoArt();
 	
 	displayBoard();
@@ -863,7 +1126,7 @@ void AboutPage() {
 }
 
 void SelectPlayers() {
-	system("cls");
+	clearScreen();
 	LogoArt();
 	
 	cout << SPACE SPACE2 "Select the number of players: \n\n";
@@ -874,7 +1137,7 @@ void SelectPlayers() {
 	string SPACES = "                                                                             ";
 	
 	while(true) {
-		system("cls");
+		clearScreen();
 		LogoArt();
 		cout << SPACE SPACE2 "Select the number of players: \n\n";
 		for(int i = 0; i < size; i++) {
@@ -888,17 +1151,18 @@ void SelectPlayers() {
 		char input = _getch();
 		switch(input) {
 			case KEY_ENTER: {
+				playSound(7);
 				switch(cursor) {
 					case 0: {
 						STATUS=MAINMENU;
 			
 						if(enableSFX)
-							PlaySound(TEXT("resources/menu-sfx.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NOSTOP);
+							playSound(2);
 						return;
 					}
 					case 1 ... 6: {
 						if(enableSFX)
-							PlaySound(TEXT("resources/menu-sfx.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NOSTOP);
+							playSound(2);
 						
 						name_position = 1;
 						numOfPlayers = cursor;
@@ -909,38 +1173,28 @@ void SelectPlayers() {
 				break;
 			}
 			
-			case KEY_UP: case KEY_W: {
+			case KEY_UP: case KEY_W: case 'w': {
 				if(cursor == 0) {
 					cursor = size-1;
 				}
 				else cursor--;
 				
 				if(enableSFX)
-					PlaySound(TEXT("resources/menu-sfx.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NOSTOP);
+					playSound(2);
 				break;
 			}
-			case KEY_DOWN: case KEY_S: {
+			case KEY_DOWN: case KEY_S: case 's': {
 				if(cursor == size-1) {
 					cursor = 0;
 				}
 				else cursor++;
 				
 				if(enableSFX)
-						PlaySound(TEXT("resources/menu-sfx.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NOSTOP);
+					playSound(2);
 				break;
 			}
 		}
 	}	
-}
-
-
-void HowToPlay() {
-	system("cls");
-	LogoArt();
-	
-	cout << "How TO Play";
-	_getch();
-	STATUS = MAINMENU;
 }
 
 void LogoArt() {
@@ -962,6 +1216,147 @@ void LogoArt() {
     cout << "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄\n\n";
 }
 
+void ThankyouArt() {
+	
+	string ThankYouText = R"(
+ 
+
+████████╗██╗  ██╗ █████╗ ███╗   ██╗██╗  ██╗    ██╗   ██╗ ██████╗ ██╗   ██╗
+╚══██╔══╝██║  ██║██╔══██╗████╗  ██║██║ ██╔╝    ╚██╗ ██╔╝██╔═══██╗██║   ██║
+   ██║   ███████║███████║██╔██╗ ██║█████╔╝      ╚████╔╝ ██║   ██║██║   ██║
+   ██║   ██╔══██║██╔══██║██║╚██╗██║██╔═██╗       ╚██╔╝  ██║   ██║██║   ██║
+   ██║   ██║  ██║██║  ██║██║ ╚████║██║  ██╗       ██║   ╚██████╔╝╚██████╔╝
+   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝       ╚═╝    ╚═════╝  ╚═════╝ 
+                                                                                                                                                                     
+   )";
+  		istringstream stream(ThankYouText);
+   		string line;
+  		while(getline(stream, line)) {
+   		std::cout << setw(34) << SPACE2 SPACE  << line << std::endl; 
+   }
+  
+}
+
+void ForPlayingArt() {
+	
+	string forPlayingText = R"(
+███████╗ ██████╗ ██████╗     ██████╗ ██╗      █████╗ ██╗   ██╗██╗███╗   ██╗ ██████╗ ██╗
+██╔════╝██╔═══██╗██╔══██╗    ██╔══██╗██║     ██╔══██╗╚██╗ ██╔╝██║████╗  ██║██╔════╝ ██║
+█████╗  ██║   ██║██████╔╝    ██████╔╝██║     ███████║ ╚████╔╝ ██║██╔██╗ ██║██║  ███╗██║
+██╔══╝  ██║   ██║██╔══██╗    ██╔═══╝ ██║     ██╔══██║  ╚██╔╝  ██║██║╚██╗██║██║   ██║╚═╝
+██║     ╚██████╔╝██║  ██║    ██║     ███████╗██║  ██║   ██║   ██║██║ ╚████║╚██████╔╝██╗
+╚═╝      ╚═════╝ ╚═╝  ╚═╝    ╚═╝     ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚═╝
+                                                                                       
+)";
+	
+	istringstream stream(forPlayingText);
+	string line;
+	while(getline(stream, line)) {
+		std::cout << SPACE2 SPACE << line << std:: endl;
+	}
+}
+void ExitGame() {
+
+	ThankyouArt(); 
+	ForPlayingArt();
+	system("pause");
+	exit(0);	
+}
+
+void HowToPlay() { //THIS IS DONE UNLESS THERE ARE CHANGES IN THE POWERUPS AND HOW THE GAMEPLAY CHANGES, WILL TWEAK IT IF THERE ARE ANY CHANGES
+	 system("cls");
+	 LogoArt();
+	 cout << SPACE SPACE2 "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄\n";
+	 cout << SPACE SPACE2 "                               🎲 SNAKE AND LADDER 🎲                      \n";
+	 cout << SPACE SPACE2 "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄\n\n";
+
+	 cout << SPACE SPACE2 "Welcome to the exciting game of Snake and Ladder with Power-Ups!\n\n";
+
+	 cout << SPACE SPACE2 "📜 HOW TO PLAY: \n";
+	 cout << SPACE SPACE2 "1. Each player takes turns rolling the dice by pressing a key.\n";
+	 cout << SPACE SPACE2 "2. The number rolled on the dice determines how many spaces the player moves\n";
+	 cout << SPACE SPACE2 "   forward.\n";
+	 cout << SPACE SPACE2 "3. Landing on the bottom of a ladder (L) will instantly move you up to a higher\n"; 
+	 cout << SPACE SPACE2 "   space. Ladders are your friends!\n";
+	 cout << SPACE SPACE2 "4. Landing on the head of a snake (S) will send you sliding down to a lower space.\n";
+	 cout << SPACE SPACE2 "   Watch out for those sneaky snakes!\n";
+	 cout << SPACE SPACE2 "5. If you land on a Power-Up (?) space, a random effect will trigger, which can\n";
+	 cout << SPACE SPACE2 "   help or hinder your progress.\n";
+	 cout << SPACE SPACE2 "6. The first player to reach exactly square 100 wins the game. If the dice roll\n";
+	 cout << SPACE SPACE2 "   exceeds 100, you bounce back the extra spaces.\n\n";
+
+	 cout << SPACE SPACE2 "✨ LEGEND: \n";
+	 cout << SPACE SPACE2 "S = Snake (Move Down)\n";
+	 cout << SPACE SPACE2 "L = Ladder (Move Up)\n";
+	 cout << SPACE SPACE2 "? = Power-Up (Random Effect)\n";
+	 cout << SPACE SPACE2 "● = Player (Each dot color represents a different player)\n\n";
+
+	 cout << SPACE SPACE2 "🧿 POWER-UP EFFECTS: \n";
+	 cout << SPACE SPACE2 "- 🎲 Extra Roll: Roll the dice again and advance further.\n";
+	 cout << SPACE SPACE2 "- 🚀 Boost: Move forward a few extra spaces.\n";
+	 cout << SPACE SPACE2 "- 🐌 Slow Down: Force another player to lose their next turn.\n";
+	 cout << SPACE SPACE2 "- ✨ Teleport: Instantly move to a random space on the board.\n";
+	 cout << SPACE SPACE2 "- 🐍 Snake Repellent: Avoid the effect of the next snake you encounter.\n";
+	 cout << SPACE SPACE2 "- 🛡️ Shield: Protect yourself from one negative effect.\n\n";
+
+	 cout << SPACE SPACE2 "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄\n";
+	 cout << SPACE SPACE2 "                             Press any key to return...        \n";
+	 cout << SPACE SPACE2 "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄\n";
+
+	 _getch();
+	 STATUS = MAINMENU;
+}
+
+void displayMenuArt() { // ADDED THIS, ASCII ART ON TOP, THE CODE BREAKS IF I ADD IT IN THE SHOWMAINMENU
+    string startGameText = R"(
+		███████╗████████╗ █████╗ ██████╗ ████████╗     ██████╗  █████╗ ███╗   ███╗███████╗
+		██╔════╝╚══██╔══╝██╔══██╗██╔══██╗╚══██╔══╝    ██╔════╝ ██╔══██╗████╗ ████║██╔════╝
+		███████╗   ██║   ███████║██████╔╝   ██║       ██║  ███╗███████║██╔████╔██║█████╗  
+		╚════██║   ██║   ██╔══██║██╔══██╗   ██║       ██║   ██║██╔══██║██║╚██╔╝██║██╔══╝  
+		███████║   ██║   ██║  ██║██║  ██║   ██║       ╚██████╔╝██║  ██║██║ ╚═╝ ██║███████╗
+		╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝        ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝
+	)";
+
+    string howToPlayText = R"(
+		██╗  ██╗ ██████╗ ██╗    ██╗    ████████╗ ██████╗     ██████╗ ██╗      █████╗ ██╗   ██╗
+		██║  ██║██╔═══██╗██║    ██║    ╚══██╔══╝██╔═══██╗    ██╔══██╗██║     ██╔══██╗╚██╗ ██╔╝
+		███████║██║   ██║██║ █╗ ██║       ██║   ██║   ██║    ██████╔╝██║     ███████║ ╚████╔╝ 
+		██╔══██║██║   ██║██║███╗██║       ██║   ██║   ██║    ██╔═══╝ ██║     ██╔══██║  ╚██╔╝  
+		██║  ██║╚██████╔╝╚███╔███╔╝       ██║   ╚██████╔╝    ██║     ███████╗██║  ██║   ██║   
+		╚═╝  ╚═╝ ╚═════╝  ╚══╝╚══╝        ╚═╝    ╚═════╝     ╚═╝     ╚══════╝╚═╝  ╚═╝   ╚═╝   
+    )";
+
+    string aboutText = R"(
+		 █████╗ ██████╗  ██████╗ ██╗   ██╗████████╗
+		██╔══██╗██╔══██╗██╔═══██╗██║   ██║╚══██╔══╝
+		███████║██████╔╝██║   ██║██║   ██║   ██║   
+		██╔══██║██╔══██╗██║   ██║██║   ██║   ██║   
+		██║  ██║██████╔╝╚██████╔╝╚██████╔╝   ██║   
+		╚═╝  ╚═╝╚═════╝  ╚═════╝  ╚═════╝    ╚═╝   
+	)";
+
+    cout << SPACE2 "Choose an Option:";
+
+    istringstream startStream(startGameText);
+    string line;
+    while (getline(startStream, line)) {
+        cout << SPACE2 << line << endl;
+    }
+    cout << endl;
+
+    istringstream howToPlayStream(howToPlayText);
+    while (getline(howToPlayStream, line)) {
+        cout << SPACE2 << line << endl;
+    }
+    cout << endl;
+
+    istringstream aboutStream(aboutText);
+    while (getline(aboutStream, line)) {
+        cout << SPACE2 << line << endl;
+    }
+    cout << endl;
+}
+
 int getConsoleWidth() {
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     int width = 80; // Default width
@@ -972,17 +1367,17 @@ int getConsoleWidth() {
 }
 
 void ShowMainMenu() {
-	system("cls");
+	clearScreen();
 	LogoArt();
 	
-	std::string options[] = {"Start Game", "About", "How to Play"};
+	std::string options[] = {"Start Game", "About", "How to Play", "Exit Game"};
 	int size = sizeof(options) / sizeof(options[0]);
 	int cursor = 0;
 	
 	string SPACES = "                                                                             ";
 	
 	while(true) {
-		system("cls");
+		clearScreen();
 		LogoArt();
 		for(int i = 0; i < size; i++) {
 			if(i == cursor)
@@ -995,47 +1390,54 @@ void ShowMainMenu() {
 		char input = _getch();
 		switch(input) {
 			case KEY_ENTER: {
+				playSound(7);
 				switch(cursor) {
 					case 0: {
 						if(enableSFX)
-							PlaySound(TEXT("resources/menu-sfx.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NOSTOP);
+							playSound(2);
 						STATUS=SELECT_PLAYERS;
 						return;
 					}
 					case 1: {
 						if(enableSFX)
-							PlaySound(TEXT("resources/menu-sfx.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NOSTOP);
+							playSound(2);
 						STATUS=ABOUT_PAGE;
 						return;
 					}
 					case 2: {
 						if(enableSFX)
-							PlaySound(TEXT("resources/menu-sfx.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NOSTOP);
+							playSound(2);
 						STATUS=HOW_TO_PLAY;
+						return;
+					}
+					case 3: {
+						if(enableSFX)
+							playSound(2);
+						STATUS=EXIT_GAME;
 						return;
 					}
 				}
 				break;
 			}
 			
-			case KEY_UP: case KEY_W: {
+			case KEY_UP: case KEY_W: case 'w': {
 				if(cursor == 0) {
 					cursor = size-1;
 				}
 				else cursor--;
 				
 				if(enableSFX)
-					PlaySound(TEXT("resources/menu-sfx.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NOSTOP);
+					playSound(2);
 				break;
 			}
-			case KEY_DOWN: case KEY_S: {
+			case KEY_DOWN: case KEY_S: case 's': {
 				if(cursor == size-1) {
 					cursor = 0;
 				}
 				else cursor++;
 				
 				if(enableSFX)
-					PlaySound(TEXT("resources/menu-sfx.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NOSTOP);
+					playSound(2);
 				break;
 			}
 		}
@@ -1133,7 +1535,7 @@ void displayLegend() {
         return a.position > b.position; 
     });
     
-    cout << SPACE SPACE2 "Legend" << SPACE << "Special Tiles" << SPACE << "[ESC] Return to Main Menu" << endl;
+    cout << SPACE SPACE2 "Legend" << SPACE << "Special Tiles        [M] BGM        [ESC] Return to Main Menu" << endl;
     cout << SPACE SPACE2 << "\033[" << BORDER_COLOR << "m▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄" << RESET << endl;
 
     int maxRows = max(6, (int)sortedPlayers.size());
@@ -1157,8 +1559,9 @@ void displayLegend() {
 		else if (i == 1) cout << "\033[" << SYMBOL_COLORS[1] << "m" << setw(18) << " T : Tail                 ";
 		else if (i == 2) cout << "\033[" << SYMBOL_COLORS[2] << "m" << setw(18) << " L : Ladder               ";
         else if (i == 3) cout << "\033[" << SYMBOL_COLORS[3] << "m" << setw(18) << " ? : Power-Up             ";
-        else if(i == 4) {
-        	int nextPlayerIndex = turnToPlay - 1;
+        else if(i == 4) cout << setw(14) << "Playing now: " << "\033[" << Player[turnToPlay].color << "m" << setw(12) << Player[turnToPlay].name << RESET;
+        else if(i == 5) {
+        	int nextPlayerIndex = turnToPlay;
             int attempts = numOfPlayers;
             
             do {
@@ -1174,7 +1577,7 @@ void displayLegend() {
                 cout << setw(12) << "Next Turn: -";
             }
 		}
-        else cout << setw(17) << "                           ";
+        else cout << setw(17) << "                          ";
 		cout << "\033[" << BORDER_COLOR << "m" << setw(15) << "█" << RESET << endl;
     }
 
@@ -1444,5 +1847,5 @@ void setConsoleSize(int width, int height) {
     SetConsoleScreenBufferSize(hOut, bufferSize);
 }
 
-//------------------------------------------------------------------------
 
+//------------------------------------------------------------------------
