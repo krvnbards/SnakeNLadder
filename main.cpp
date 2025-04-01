@@ -19,10 +19,11 @@
 #include <unordered_set>
 #include <algorithm>
 
-
 #define SPACE "                      "
 #define SPACE2 "       "
 #define SPACE1 "  "
+#define SPACE3 "                   "
+#define SPACE4 "          "
 
 #define KEY_UP 72
 #define KEY_LEFT 75
@@ -183,6 +184,7 @@ enum stat_list {
 	ABOUT_PAGE,
 	GAME_ENTERNAME,
 	GAME_STARTED,
+	SETTINGS_PAGE,
 	SELECT_PLAYER_COLOR,
 	EXIT_GAME,
 };
@@ -200,17 +202,23 @@ void ShowMainMenu();
 int getConsoleWidth();
 void SelectPlayers();
 void HowToPlay();
-void displayMenuArt();
 void Pause(int ms);
+void PrintCharDelay();
+void PrintCharDelay2();
+void PrintAnimation();
+void DevelopersArt();
 void AboutPage();
 void showProgressBar(int total, int consoleWidth);
 void EnterName();
 void StartGame();
 void SelectColors();
+void playSound();
 void SelectPlayerColor();
 void ClearGame();
 void showCursor();
 void hideCursor();
+void SettingsPage();
+void displayAsciiOptions(int cursor);
 void displayLegend();
 void playHopSound();
 void PlayBackgroundMusic();
@@ -228,8 +236,7 @@ void ThankyouArt();
 void ExitGame();
 //------------------------------------------------------------------------
 
-int main()
-{
+int main() {
 	HWND hwnd = GetConsoleWindow();
 	if (hwnd) {
         
@@ -297,6 +304,10 @@ int main()
 			}
 			case HOW_TO_PLAY: {
 				HowToPlay();
+				break;
+			}
+			case SETTINGS_PAGE: {
+				SettingsPage();
 				break;
 			}
 			case SELECT_PLAYER_COLOR: {
@@ -1117,14 +1128,132 @@ void SelectColors() {
 	}
 }
 
+void DevelopersArt() {
+	
+	string DevelopersText = R"(
+██████╗ ███████╗██╗   ██╗███████╗██╗      ██████╗ ██████╗ ███████╗██████╗ ███████╗
+██╔══██╗██╔════╝██║   ██║██╔════╝██║     ██╔═══██╗██╔══██╗██╔════╝██╔══██╗██╔════╝
+██║  ██║█████╗  ██║   ██║█████╗  ██║     ██║   ██║██████╔╝█████╗  ██████╔╝███████╗
+██║  ██║██╔══╝  ╚██╗ ██╔╝██╔══╝  ██║     ██║   ██║██╔═══╝ ██╔══╝  ██╔══██╗╚════██║
+██████╔╝███████╗ ╚████╔╝ ███████╗███████╗╚██████╔╝██║     ███████╗██║  ██║███████║
+╚═════╝ ╚══════╝  ╚═══╝  ╚══════╝╚══════╝ ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═╝╚══════╝
+                                                                                  
+)";
+
+	istringstream stream(DevelopersText);
+	string line;
+	
+	while(getline(stream, line)) {
+		std::cout << SPACE1 SPACE SPACE1 SPACE2 << line << std::endl;
+	}
+}
+
+void PrintCharDelay(string text, int delay = 10) {
+	
+	for (char ch : text) {
+		cout << ch; 
+		Sleep(delay);
+	}
+	cout << endl;
+}
+
+void PrintCharDelay2(string text, int delay = 15) {
+	
+	for (char ch : text) {
+		cout << ch;
+		Sleep(delay);
+	}
+}
+void PrintAnimation(const string lines[], int size, int delay = 100 ) {
+	
+	for (int i = 0; i < size; i++) {
+		cout << lines[i] << endl;
+		this_thread::sleep_for(chrono::milliseconds(delay)); 
+	}
+}
+
 void AboutPage() {
 	clearScreen();
 	LogoArt();
+	DevelopersArt();
+	string choice;
 	
-	displayBoard();
-	_getch();
-}
+	const string devNames[] = {{(SPACE SPACE3 SPACE2 "                                                    ")},
+							   {(SPACE SPACE3 SPACE2 "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄")},
+							   {(SPACE SPACE3 SPACE2 "█                                                  █")},
+							   {(SPACE SPACE3 SPACE2 "█                 Kervin Bardilas                  █")},
+							   {(SPACE SPACE3 SPACE2 "█                  Jules Omambac                   █")},
+							   {(SPACE SPACE3 SPACE2 "█                 Kendrick Lanuza                  █")},
+							   {(SPACE SPACE3 SPACE2 "█                                                  █")},
+							   {(SPACE SPACE3 SPACE2 "█▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄█")}};
+							   
+	int nameSize = sizeof(devNames)/sizeof(devNames[0]);
+	PrintAnimation(devNames, nameSize, 200);
+	
+	while(1) {
+		
+		cout << endl;
+		PrintCharDelay2(SPACE SPACE3 SPACE2 "See developers description(y/n): ");
+		cin >> choice;
+		cout << endl;
+		
+		if (choice == "y" || choice == "Y") {
+			const string devDescription1[] = {{(SPACE SPACE3 SPACE2 "Age:    20")},
+											 {(SPACE SPACE3 SPACE2 "Status: Student")},
+											 {(SPACE SPACE3 SPACE2 "Gender: Male")},
+											 {(SPACE SPACE3 SPACE2 "Motto: Do it scared, do it tired, do it broke, do it alone, do it unsure, but do it\n "
+											   SPACE SPACE3 SPACE2 "		anyways. Because we think we have forever to chase our dreams\n"
+											   SPACE SPACE3 SPACE2 "		but today is all we really have and you'll never get it back.\n"
+											   SPACE SPACE3 SPACE2 "		and you'll never get it back. No regrets!\n")}};
+											 
+			const string devDescription2[] = {{(SPACE SPACE3 SPACE2 "Age:	20")},
+											 {(SPACE SPACE3 SPACE2 "Status: Student")},
+											 {(SPACE SPACE3 SPACE2 "Gender: Male")},
+											 {(SPACE SPACE3 SPACE2 "Motto: Live intentionally!\n")}};
+											 
+			const string devDescription3[] = {{(SPACE SPACE3 SPACE2 "Age:	19")},
+											 {(SPACE SPACE3 SPACE2 "Status: Student")},
+											 {(SPACE SPACE3 SPACE2 "Gender: Male")},
+											 {(SPACE SPACE3 SPACE2 "Motto:	Just do it!")}};
+			
+			const string* devDESCRIPTIONS[] = {devDescription1, devDescription2, devDescription3};								 
+			int descriptionSize[] = {
+										sizeof(devDescription1)/ sizeof(devDescription1)[0],
+										sizeof(devDescription2)/ sizeof(devDescription2)[0],
+										sizeof(devDescription3)/ sizeof(devDescription3)[0]
+										};
+			
+			const string devNames[] = {{(SPACE1 SPACE4 SPACE2 "Name: Kervin Bardilas")},
+									   {(SPACE1 SPACE4 SPACE2 "Name: Jules Omambac")},
+									   {(SPACE1 SPACE4 SPACE2 "Name: Kendrick Lanuza")}};
+			
+			int numDetails = sizeof(devDESCRIPTIONS)/sizeof(devDESCRIPTIONS[0]);
+			
+			for(int i = 0; i < numDetails; i++) {
+				PrintCharDelay(SPACE SPACE2 + devNames[i], 15);
+				PrintAnimation(devDESCRIPTIONS[i], descriptionSize[i],200);
+			}
+			break;
+		} 
+		else if(choice == "N" || choice == "n") {
+			cout << SPACE SPACE2 "Returning to main menu!" << endl;
+			STATUS = MAINMENU;
+			break;
+		} 
+		else {
+			system("cls");
+			cout << SPACE SPACE3 SPACE2 "Invalid choice!" << endl;
 
+		}
+	
+	}
+	
+	cout << endl;	
+	cout << "Return to main menu. Press any key to continue...";
+	_getch();
+	STATUS = MAINMENU;
+}
+		
 void SelectPlayers() {
 	clearScreen();
 	LogoArt();
@@ -1199,12 +1328,12 @@ void SelectPlayers() {
 
 void LogoArt() {
 	string text = R"(
-	███████╗███╗   ██╗ █████╗ ██╗  ██╗███████╗███████╗       ██╗       ██╗      █████╗ ██████╗ ██████╗ ███████╗██████╗ ███████╗
-	██╔════╝████╗  ██║██╔══██╗██║ ██╔╝██╔════╝██╔════╝       ██║       ██║     ██╔══██╗██╔══██╗██╔══██╗██╔════╝██╔══██╗██╔════╝
-	███████╗██╔██╗ ██║███████║█████╔╝ █████╗  ███████╗    ████████╗    ██║     ███████║██║  ██║██║  ██║█████╗  ██████╔╝███████╗
-	╚════██║██║╚██╗██║██╔══██║██╔═██╗ ██╔══╝  ╚════██║    ██╔═██╔═╝    ██║     ██╔══██║██║  ██║██║  ██║██╔══╝  ██╔══██╗╚════██║
-	███████║██║ ╚████║██║  ██║██║  ██╗███████╗███████║    ██████║      ███████╗██║  ██║██████╔╝██████╔╝███████╗██║  ██║███████║
-	╚══════╝╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝    ╚═════╝      ╚══════╝╚═╝  ╚═╝╚═════╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝╚══════╝
+	  ███████╗███╗   ██╗ █████╗ ██╗  ██╗███████╗███████╗       ██╗       ██╗      █████╗ ██████╗ ██████╗ ███████╗██████╗ ███████╗
+	  ██╔════╝████╗  ██║██╔══██╗██║ ██╔╝██╔════╝██╔════╝       ██║       ██║     ██╔══██╗██╔══██╗██╔══██╗██╔════╝██╔══██╗██╔════╝
+	  ███████╗██╔██╗ ██║███████║█████╔╝ █████╗  ███████╗    ████████╗    ██║     ███████║██║  ██║██║  ██║█████╗  ██████╔╝███████╗
+	  ╚════██║██║╚██╗██║██╔══██║██╔═██╗ ██╔══╝  ╚════██║    ██╔═██╔═╝    ██║     ██╔══██║██║  ██║██║  ██║██╔══╝  ██╔══██╗╚════██║
+	  ███████║██║ ╚████║██║  ██║██║  ██╗███████╗███████║    ██████║      ███████╗██║  ██║██████╔╝██████╔╝███████╗██║  ██║███████║
+	  ╚══════╝╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝    ╚═════╝      ╚══════╝╚═╝  ╚═╝╚═════╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝╚══════╝
 	)";
 	
 	istringstream stream(text);
@@ -1255,15 +1384,21 @@ void ForPlayingArt() {
 		std::cout << SPACE2 SPACE << line << std:: endl;
 	}
 }
-void ExitGame() {
 
+void ExitGame() {
+	system("cls");
+	LogoArt();
 	ThankyouArt(); 
 	ForPlayingArt();
 	system("pause");
 	exit(0);	
 }
 
-void HowToPlay() { //THIS IS DONE UNLESS THERE ARE CHANGES IN THE POWERUPS AND HOW THE GAMEPLAY CHANGES, WILL TWEAK IT IF THERE ARE ANY CHANGES
+void SettingsPage() {
+	
+}
+
+void HowToPlay() { 
 	 system("cls");
 	 LogoArt();
 	 cout << SPACE SPACE2 "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄\n";
@@ -1273,31 +1408,31 @@ void HowToPlay() { //THIS IS DONE UNLESS THERE ARE CHANGES IN THE POWERUPS AND H
 	 cout << SPACE SPACE2 "Welcome to the exciting game of Snake and Ladder with Power-Ups!\n\n";
 
 	 cout << SPACE SPACE2 "📜 HOW TO PLAY: \n";
-	 cout << SPACE SPACE2 "1. Each player takes turns rolling the dice by pressing a key.\n";
-	 cout << SPACE SPACE2 "2. The number rolled on the dice determines how many spaces the player moves\n";
-	 cout << SPACE SPACE2 "   forward.\n";
-	 cout << SPACE SPACE2 "3. Landing on the bottom of a ladder (L) will instantly move you up to a higher\n"; 
-	 cout << SPACE SPACE2 "   space. Ladders are your friends!\n";
-	 cout << SPACE SPACE2 "4. Landing on the head of a snake (S) will send you sliding down to a lower space.\n";
-	 cout << SPACE SPACE2 "   Watch out for those sneaky snakes!\n";
-	 cout << SPACE SPACE2 "5. If you land on a Power-Up (?) space, a random effect will trigger, which can\n";
-	 cout << SPACE SPACE2 "   help or hinder your progress.\n";
-	 cout << SPACE SPACE2 "6. The first player to reach exactly square 100 wins the game. If the dice roll\n";
-	 cout << SPACE SPACE2 "   exceeds 100, you bounce back the extra spaces.\n\n";
+	 cout << SPACE SPACE2 "   1. Each  player  takes  turns  rolling  the  dice  by  pressing  a  key.\n";
+	 cout << SPACE SPACE2 "   2. The number rolled on the  dice  determines  how many  spaces  the player moves\n";
+	 cout << SPACE SPACE2 "      forward.\n";
+	 cout << SPACE SPACE2 "   3. Landing on the bottom of a  Ladder (L)  will instantly move you up to a higher\n"; 
+	 cout << SPACE SPACE2 "      space.  Ladders  are  your  friends!\n";
+	 cout << SPACE SPACE2 "   4. Landing on the head of a Snake (S) will send you sliding down to a lower space.\n";
+	 cout << SPACE SPACE2 "      Watch  out  for  those  sneaky  snakes!\n";
+	 cout << SPACE SPACE2 "   5. If you land on a  Power-Up (?)  space, a random effect will  trigger, which can\n";
+	 cout << SPACE SPACE2 "      help  or  hinder  your  progress.\n";
+	 cout << SPACE SPACE2 "   6. The first player to reach exactly  square 100 wins  the game.  If the dice roll\n";
+	 cout << SPACE SPACE2 "      exceeds  100,  you  bounce  back  the  extra  spaces.\n\n";
 
 	 cout << SPACE SPACE2 "✨ LEGEND: \n";
-	 cout << SPACE SPACE2 "S = Snake (Move Down)\n";
-	 cout << SPACE SPACE2 "L = Ladder (Move Up)\n";
-	 cout << SPACE SPACE2 "? = Power-Up (Random Effect)\n";
-	 cout << SPACE SPACE2 "● = Player (Each dot color represents a different player)\n\n";
+	 cout << SPACE SPACE2 "   S = Snake  (Move  Down)\n";
+	 cout << SPACE SPACE2 "   L = Ladder  (Move  Up)\n";
+	 cout << SPACE SPACE2 "   ? = Power-Up  (Random  Effect)\n";
+	 cout << SPACE SPACE2 "   ● = Player  (Each  dot  color  represents  a  different  player)\n\n";
 
 	 cout << SPACE SPACE2 "🧿 POWER-UP EFFECTS: \n";
-	 cout << SPACE SPACE2 "- 🎲 Extra Roll: Roll the dice again and advance further.\n";
-	 cout << SPACE SPACE2 "- 🚀 Boost: Move forward a few extra spaces.\n";
-	 cout << SPACE SPACE2 "- 🐌 Slow Down: Force another player to lose their next turn.\n";
-	 cout << SPACE SPACE2 "- ✨ Teleport: Instantly move to a random space on the board.\n";
-	 cout << SPACE SPACE2 "- 🐍 Snake Repellent: Avoid the effect of the next snake you encounter.\n";
-	 cout << SPACE SPACE2 "- 🛡️ Shield: Protect yourself from one negative effect.\n\n";
+	 cout << SPACE SPACE2 "   - 🎲 Extra Roll:  Roll  the  dice  again  and  advance  further.\n";
+	 cout << SPACE SPACE2 "   - 🚀 Boost:  Move  forward  a  few  extra  spaces.\n";
+	 cout << SPACE SPACE2 "   - 🐌 Slow Down:  Force  another  player  to  lose  their  next  turn.\n";
+	 cout << SPACE SPACE2 "   - ✨ Teleport:  Instantly  move  to  a  random  space  on  the  board.\n";
+	 cout << SPACE SPACE2 "   - 🐍 Snake Repellent:  Avoid  the  effect  of  the  next  snake  you  encounter.\n";
+	 cout << SPACE SPACE2 "   - 🛡️ Shield:  Protect  yourself  from  one  negative  effect.\n\n";
 
 	 cout << SPACE SPACE2 "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄\n";
 	 cout << SPACE SPACE2 "                             Press any key to return...        \n";
@@ -1307,55 +1442,81 @@ void HowToPlay() { //THIS IS DONE UNLESS THERE ARE CHANGES IN THE POWERUPS AND H
 	 STATUS = MAINMENU;
 }
 
-void displayMenuArt() { // ADDED THIS, ASCII ART ON TOP, THE CODE BREAKS IF I ADD IT IN THE SHOWMAINMENU
-    string startGameText = R"(
-		███████╗████████╗ █████╗ ██████╗ ████████╗     ██████╗  █████╗ ███╗   ███╗███████╗
-		██╔════╝╚══██╔══╝██╔══██╗██╔══██╗╚══██╔══╝    ██╔════╝ ██╔══██╗████╗ ████║██╔════╝
-		███████╗   ██║   ███████║██████╔╝   ██║       ██║  ███╗███████║██╔████╔██║█████╗  
-		╚════██║   ██║   ██╔══██║██╔══██╗   ██║       ██║   ██║██╔══██║██║╚██╔╝██║██╔══╝  
-		███████║   ██║   ██║  ██║██║  ██║   ██║       ╚██████╔╝██║  ██║██║ ╚═╝ ██║███████╗
-		╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝        ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝
-	)";
+void displayAsciiOptions(int cursor) {
+    string asciiOptions[] = {
+        R"(
+.-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-  ___ _____ _   ___ _____    ___   _   __  __ ___  _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-.
+._-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_ / __|_   _/_\ | _ \_   _|  / __| /_\ |  \/  | __| -_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_.
+.-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_- \__ \ | |/ _ \|   / | |   | (_ |/ _ \| |\/| | _|  _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-.
+._-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_ |___/ |_|_/ \_\_|_\ |_|    \___/_/ \_\_|  |_|___| -_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_.)",
+		R"(
+._-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_    _   ___  ___  _   _ _____  _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-.
+.-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-   /_\ | _ )/ _ \| | | |_   _| -_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_.
+._-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_  / _ \| _ \ (_) | |_| | | |   _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-.
+.-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_- /_/ \_\___/\___/ \___/  |_|   -_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_.)",
+        R"(
+.-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-  _  _  _____      __  _____ ___    ___ _      ___   __ -_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-.
+._-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_ | || |/ _ \ \    / / |_   _/ _ \  | _ \ |    /_\ \ / / _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_.
+.-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_- | __ | (_) \ \/\/ /    | || (_) | |  _/ |__ / _ \ V /  -_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-.
+._-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_ |_||_|\___/ \_/\_/     |_| \___/  |_| |____/_/ \_\_|   _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_.)",
+        R"(
+._-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_  ___ ___ _____ _____ ___ _  _  ___ ___  _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-.
+.-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_- / __| __|_   _|_   _|_ _| \| |/ __/ __| -_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_.
+._-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_ \__ \ _|  | |   | |  | || .` | (_ \__ \ _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-.
+.-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_- |___/___| |_|   |_| |___|_|\_|\___|___/ -_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_.)",
+		R"(
+.-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_  _____  _____ _____    ___   _   __  __ ___  -_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_.
+._-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_- | __\ \/ /_ _|_   _|  / __| /_\ |  \/  | __| _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-.
+.-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_ | _| >  < | |  | |   | (_ |/ _ \| |\/| | _|  -_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_.
+._-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_- |___/_/\_\___| |_|    \___/_/ \_\_|  |_|___| _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-.)"
+    };
 
-    string howToPlayText = R"(
-		██╗  ██╗ ██████╗ ██╗    ██╗    ████████╗ ██████╗     ██████╗ ██╗      █████╗ ██╗   ██╗
-		██║  ██║██╔═══██╗██║    ██║    ╚══██╔══╝██╔═══██╗    ██╔══██╗██║     ██╔══██╗╚██╗ ██╔╝
-		███████║██║   ██║██║ █╗ ██║       ██║   ██║   ██║    ██████╔╝██║     ███████║ ╚████╔╝ 
-		██╔══██║██║   ██║██║███╗██║       ██║   ██║   ██║    ██╔═══╝ ██║     ██╔══██║  ╚██╔╝  
-		██║  ██║╚██████╔╝╚███╔███╔╝       ██║   ╚██████╔╝    ██║     ███████╗██║  ██║   ██║   
-		╚═╝  ╚═╝ ╚═════╝  ╚══╝╚══╝        ╚═╝    ╚═════╝     ╚═╝     ╚══════╝╚═╝  ╚═╝   ╚═╝   
-    )";
-
-    string aboutText = R"(
-		 █████╗ ██████╗  ██████╗ ██╗   ██╗████████╗
-		██╔══██╗██╔══██╗██╔═══██╗██║   ██║╚══██╔══╝
-		███████║██████╔╝██║   ██║██║   ██║   ██║   
-		██╔══██║██╔══██╗██║   ██║██║   ██║   ██║   
-		██║  ██║██████╔╝╚██████╔╝╚██████╔╝   ██║   
-		╚═╝  ╚═╝╚═════╝  ╚═════╝  ╚═════╝    ╚═╝   
-	)";
-
-    cout << SPACE2 "Choose an Option:";
-
-    istringstream startStream(startGameText);
-    string line;
-    while (getline(startStream, line)) {
-        cout << SPACE2 << line << endl;
+    for (int i = 0; i < 5; i++) {
+        if (i == cursor)
+            cout << HIGHLIGHT << asciiOptions[i] << RESET << endl;
+        else
+            cout << asciiOptions[i] << endl;
     }
-    cout << endl;
-
-    istringstream howToPlayStream(howToPlayText);
-    while (getline(howToPlayStream, line)) {
-        cout << SPACE2 << line << endl;
-    }
-    cout << endl;
-
-    istringstream aboutStream(aboutText);
-    while (getline(aboutStream, line)) {
-        cout << SPACE2 << line << endl;
-    }
-    cout << endl;
 }
+
+void ShowMainMenu() {
+    clearScreen();
+    LogoArt();
+    
+    int cursor = 0;
+
+    while (true) {
+        clearScreen();
+        LogoArt();
+        displayAsciiOptions(cursor);
+
+        FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
+        char input = _getch();
+
+        switch (input) {
+            case KEY_ENTER:
+                playSound(7);
+                if (enableSFX) playSound(2);
+                STATUS = (cursor == 0) ? SELECT_PLAYERS : 
+                         (cursor == 1) ? ABOUT_PAGE : 
+                         (cursor == 2) ? HOW_TO_PLAY : 
+                         (cursor == 3) ? SETTINGS_PAGE : 
+                         EXIT_GAME;
+                return;
+            case KEY_UP: case KEY_W: case 'w':
+                cursor = (cursor == 0) ? 4 : cursor - 1;
+                if (enableSFX) playSound(2);
+                break;
+            case KEY_DOWN: case KEY_S: case 's':
+                cursor = (cursor == 4) ? 0 : cursor + 1;
+                if (enableSFX) playSound(2);
+                break;
+        }
+    }
+}
+
+
+
 
 int getConsoleWidth() {
     CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -1366,83 +1527,6 @@ int getConsoleWidth() {
     return width;
 }
 
-void ShowMainMenu() {
-	clearScreen();
-	LogoArt();
-	
-	std::string options[] = {"Start Game", "About", "How to Play", "Exit Game"};
-	int size = sizeof(options) / sizeof(options[0]);
-	int cursor = 0;
-	
-	string SPACES = "                                                                             ";
-	
-	while(true) {
-		clearScreen();
-		LogoArt();
-		for(int i = 0; i < size; i++) {
-			if(i == cursor)
-				cout << HIGHLIGHT << SPACE SPACE SPACE2 << " > " << options[i]  << "\033[K" << RESET << endl;
-			else
-				cout << SPACE SPACE SPACE2 << options[i] << endl;
-		}
-		
-		FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
-		char input = _getch();
-		switch(input) {
-			case KEY_ENTER: {
-				playSound(7);
-				switch(cursor) {
-					case 0: {
-						if(enableSFX)
-							playSound(2);
-						STATUS=SELECT_PLAYERS;
-						return;
-					}
-					case 1: {
-						if(enableSFX)
-							playSound(2);
-						STATUS=ABOUT_PAGE;
-						return;
-					}
-					case 2: {
-						if(enableSFX)
-							playSound(2);
-						STATUS=HOW_TO_PLAY;
-						return;
-					}
-					case 3: {
-						if(enableSFX)
-							playSound(2);
-						STATUS=EXIT_GAME;
-						return;
-					}
-				}
-				break;
-			}
-			
-			case KEY_UP: case KEY_W: case 'w': {
-				if(cursor == 0) {
-					cursor = size-1;
-				}
-				else cursor--;
-				
-				if(enableSFX)
-					playSound(2);
-				break;
-			}
-			case KEY_DOWN: case KEY_S: case 's': {
-				if(cursor == size-1) {
-					cursor = 0;
-				}
-				else cursor++;
-				
-				if(enableSFX)
-					playSound(2);
-				break;
-			}
-		}
-	}	
-}
 
 void Pause(int ms) {
 
@@ -1848,4 +1932,4 @@ void setConsoleSize(int width, int height) {
 }
 
 
-//------------------------------------------------------------------------
+//------------------------------------------------------------------------'
