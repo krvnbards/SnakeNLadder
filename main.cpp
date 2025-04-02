@@ -96,21 +96,21 @@ using namespace std;
 #define SPACE1 "  "
 #define CENTER "                                                                                         "
 
-string OPTION_COLOR = "\033[97;104m";
-string HIGHLIGHTED_OPTION_COLOR = "\033[97;43m";
-string LOGO_COLOR = "\033[101;37m";
+string OPTION_COLOR = "\033[38;2;160;181;170m\033[48;2;3;70;99m";
+string HIGHLIGHTED_OPTION_COLOR = "\033[38;2;157;34;14m\033[48;2;237;160;15m";
+string LOGO_COLOR = "\033[38;2;0;0;0m\033[48;2;255;127;39m";
 
-string FOREGROUND = "37";
-string BACKGROUND = "40";
-string RESET = "\033[" + FOREGROUND + ";" + BACKGROUND + "m";
-string BORDER_COLOR = "47";
+string FOREGROUND = "\033[38;2;255;255;255m";
+string BACKGROUND = "\033[48;2;0;45;45m";
+string RESET = FOREGROUND+BACKGROUNDsw;
+string BORDER_COLOR = "\033[38;2;255;255;255m";
 			// WHITE BG BLACK TEXT         // BRIGHT RED BG BLACK TEXT
 	
 // SA BOARD SETTINGS NI
-string BOARD_BACKGROUND[] = {"106", "47"}; // 106 103 = YELLOW CYAN      101 107 = RED WHITE
-string BOARD_TEXT = "90";
-string alt_color[] = {"\033[" + BOARD_TEXT + ";" + BOARD_BACKGROUND[0] + "m", "\033[" + BOARD_TEXT + ";"+ BOARD_BACKGROUND[1] + "m"};
-string SYMBOL_COLORS[] = {"35", "35", "92", "34"}; // Snake Tail Ladder Special(POWERUP)
+string BOARD_BACKGROUND[] = {"\033[48;2;246;129;50m", "\033[48;2;255;229;148m"}; // 106 103 = YELLOW CYAN      101 107 = RED WHITE
+string BOARD_TEXT[] = {"\033[38;2;0;0;0m", "\033[38;2;0;0;0m"};
+string alt_color[] = {BOARD_TEXT[0]+BOARD_BACKGROUND[0], BOARD_TEXT[1]+BOARD_BACKGROUND[1]};
+string SYMBOL_COLORS[] = {"\033[38;2;139;0;0m", "\033[38;2;139;0;0m", "\033[38;2;0;100;200m", "\033[38;2;0;200;0m"}; // Snake Tail Ladder Special(POWERUP)
 string PLAYER_SYMBOL = "●";
 
 string TEXT_COLOR = "97";
@@ -171,15 +171,15 @@ unordered_set<int> powerups = {
 };
 
 vector<string> availableColors = {
-    "31", // Red
-    "32", // Green
-    "33", // Yellow
-    "34", // Blue
-    "35", // Magenta
-    "36", // Cyan
-    "37", // White
-    "91", // Bright Red
-    "92", // Bright Green
+    "\033[38;2;200;0;0m",   // Red
+    "\033[38;2;0;150;0m",   // Green
+    "\033[38;2;200;200;0m", // Yellow
+    "\033[38;2;0;0;200m",   // Blue
+    "\033[38;2;200;0;200m", // Magenta
+    "\033[38;2;0;200;200m", // Cyan
+    "\033[38;2;200;200;200m", // White
+    "\033[38;2;255;0;0m",   // Bright Red
+    "\033[38;2;0;255;0m",   // Bright Green
 };
 
 //------------------------------------------------------------------------
@@ -208,6 +208,7 @@ void LogoArt();
 void setConsoleSize(int width, int height);
 void ShowMainMenu();
 int getConsoleWidth();
+int getConsoleHeight();
 void SelectPlayers();
 void HowToPlay();
 void Pause(int ms);
@@ -260,8 +261,8 @@ int main()
 	//setlocale(LC_ALL, "");
 	//setConsoleSize(1200, 1200);
 	
-	int width = getConsoleWidth();
-	
+	int height = getConsoleHeight();
+	cout << height;
 	
     cout << "\n\n" << RESET;
     
@@ -674,7 +675,7 @@ void rollPowerUps() {
 
     for (int i = 0; i < 6; ++i) {
         int randomFace = rand() % 7;
-        cout << "\r" << SPACE SPACE2 << "\033[J" << "\033[" << SYMBOL_COLORS[3] << "m" << POWER_UPS[randomFace] << RESET;
+        cout << "\r" << SPACE SPACE2 << SYMBOL_COLORS[3] << POWER_UPS[randomFace] << RESET;
         int delay = rand() % 300 + 500;
         this_thread::sleep_for(chrono::milliseconds(delay));
     }
@@ -683,7 +684,7 @@ void rollPowerUps() {
 int revealPowerUp() {
 	int finalPower = rand() % 6;
 	Pause(1000);
-	cout << "\r" << SPACE SPACE2 << "\033[J" << "You gained the power up: " << "\033[" << SYMBOL_COLORS[3] << "m" << POWER_UPS[finalPower] << RESET << endl;
+	cout << "\r" << SPACE SPACE2 << "\033[J" << "You gained the power up: " << SYMBOL_COLORS[3] << POWER_UPS[finalPower] << RESET << endl;
 	return finalPower;
 }
 
@@ -750,7 +751,7 @@ void teleportPlayer(int playerIndex) {
         newPos--;
     }
     
-    cout << SPACE SPACE2 << "\033[" << SYMBOL_COLORS[3] << "mTELEPORT! "<< RESET << Player[playerIndex].name << " activated a teleport power-up! --> " << newPos << endl;
+    cout << SPACE SPACE2 << SYMBOL_COLORS[3] << "TELEPORT! "<< RESET << Player[playerIndex].name << " activated a teleport power-up! --> " << newPos << endl;
     _getch();
 
     movePlayerAnimation(playerIndex, newPos, true, true);
@@ -759,14 +760,14 @@ void teleportPlayer(int playerIndex) {
 
 void applyPowerUp(int player) {
     cout << SPACE SPACE2 << "\033[" << Player[player].color << "m" << Player[player].name 
-         << RESET << ", has stepped on a \033[" << SYMBOL_COLORS[3] << "mPOWERUP!" << RESET << "." << endl;
+         << RESET << ", has stepped on a " << SYMBOL_COLORS[3] << "POWERUP!" << RESET << "." << endl;
 
     cout << SPACE SPACE2 << "\033[JRolling power-ups..." << endl;
     rollPowerUps();
     int power = revealPowerUp();
 
     if (power == 0) { // Extra Roll
-        cout << SPACE SPACE2 << "\033[" << SYMBOL_COLORS[3] 
+        cout << SPACE SPACE2 << SYMBOL_COLORS[3] 
              << "mYou will be able to roll the dice again!" << RESET << endl;
     } 
     else if (power == 1) { // Boost (+5 Spaces)
@@ -774,7 +775,7 @@ void applyPowerUp(int player) {
         int finalPos = Player[player].position + boostAmount;
         if (finalPos > 100) finalPos = 100 - (finalPos - 100);
 
-        cout << SPACE SPACE2 << "\033[" << SYMBOL_COLORS[3] 
+        cout << SPACE SPACE2 << SYMBOL_COLORS[3] 
              << "mYou will move +" << boostAmount << " extra spaces forward!" << RESET << endl;
         _getch();
 
@@ -809,7 +810,7 @@ void giveShield(int player, int type) {
 }
 
 void slowDownOpponent(int player) {
-    cout << SPACE SPACE2 << "\033[" << SYMBOL_COLORS[3] 
+    cout << SPACE SPACE2 << SYMBOL_COLORS[3] 
          << "mChoose an opponent to move -3 spaces backward." << RESET << endl;
 
     cout << SPACE SPACE2 << "Player list:" << endl;
@@ -880,7 +881,7 @@ void movePlayerAnimation(int playerIndex, int finalPos, bool forward, bool isTel
 	if (isTeleport) {
         Player[playerIndex].position = finalPos;
         playSound(9); 
-        cout << "\033[11;1H";
+        cout << "\033[20;1H";
         displayBoard();
         return;
     }
@@ -904,7 +905,7 @@ void movePlayerAnimation(int playerIndex, int finalPos, bool forward, bool isTel
         Player[playerIndex].position = currentPosition;
 
         
-        cout << "\033[11;1H";
+        cout << "\033[20;1H";
         displayBoard();
         if (enableSFX) playSound(1); // Step sound
 
@@ -923,7 +924,7 @@ void handleLadderOrSnake(int playerIndex) {
         for(int i = 1; i <= (width-42) / 2; i++)
         	center += " ";
         cout << SPACE SPACE2 << "\033[" << Player[playerIndex].color << "m" << Player[playerIndex].name
-             << RESET << ", has stepped on a \033[" << SYMBOL_COLORS[2] << "mLADDER! -->" 
+             << RESET << ", has stepped on a " << SYMBOL_COLORS[2] << "LADDER! -->" 
              << ladderEnd << RESET << "." << endl;
         _getch();
         movePlayerAnimation(playerIndex, ladderEnd, true, false);
@@ -935,14 +936,14 @@ void handleLadderOrSnake(int playerIndex) {
         	
     	if(Player[playerIndex].snakeShield) {
     		cout << center << "\033[" << Player[playerIndex].color << "m" << Player[playerIndex].name
-             << RESET << ", has repelled the effects of \033[" << SYMBOL_COLORS[0] << "mSNAKE!" << RESET << endl;
+             << RESET << ", has repelled the effects of " << SYMBOL_COLORS[0] << "SNAKE!" << RESET << endl;
              Player[playerIndex].snakeShield = false;
              return;
 		}
         int snakeTail = snakes[pos];
         playSound(4);
         cout << center << "\033[" << Player[playerIndex].color << "m" << Player[playerIndex].name
-             << RESET << ", has stepped on a \033[" << SYMBOL_COLORS[0] << "mSNAKE! -->" 
+             << RESET << ", has stepped on a " << SYMBOL_COLORS[0] << "SNAKE! -->" 
              << snakeTail << RESET << "." << endl;
         _getch();
         movePlayerAnimation(playerIndex, snakeTail, false, false);
@@ -1006,7 +1007,10 @@ void StartGame() {
         // Clear screen and display game state
         //clearScreen();
         system("cls");
-        //LogoArt();
+        
+        if(getConsoleHeight() >= 35)
+        	LogoArt();
+        	
         displayLegend();
         
         displayBoard();
@@ -1139,14 +1143,14 @@ void SelectPlayerColor() {
 void SelectColors() {
 	clearScreen();
 	LogoArt();
-	
+	int width = getConsoleWidth();
 	int size = Player.size();
 	string options[size+2];
 	options[0] = "Back";
 	options[1] = "Start Game";
 	int count = 2;
 	for(const playa& p : Player) {
-		options[count] = p.name + " : " + "\033[" + p.color + "m" + PLAYER_SYMBOL + RESET;
+		options[count] = p.name + " : " + p.color + PLAYER_SYMBOL + RESET;
 		count++;
 	}
 	
@@ -1156,13 +1160,20 @@ void SelectColors() {
 		clearScreen();
 		cout << "\n\n\n\n\n";
 		LogoArt();
-		
-		cout << CENTER "Choose a color for each player or Start the game:\n";
+		string center="";
+			for(int h = 1; h <= (width - 49) / 2; h++) 
+				center += " ";
+		cout << center << "Choose a color for each player or Start the game:\n";
 		for(int i = 0; i < size+2; i++) {
+			center="";
+			int len = options[i].length();
+			if(i > 1)
+				len -= 13;
+			for(int h = 1; h <= (width - len) / 2; h++) center += " ";
 			if(i == cursor)
-				cout << HIGHLIGHT << CENTER << " > " << options[i]  << HIGHLIGHT << "\033[K" << RESET << endl;
+				cout << HIGHLIGHT << center << " > " << options[i] << HIGHLIGHT << "\033[K" << RESET << endl;
 			else
-				cout << CENTER << RESET << options[i] << RESET << endl;
+				cout << center << RESET << options[i] << RESET << endl;
 		}
 		
 		FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
@@ -1647,6 +1658,14 @@ int getConsoleWidth() {
     return width;
 }
 
+int getConsoleHeight() {
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
+        return csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+    }
+    return -1; // Error case
+}
+
 void ShowMainMenu() {
     clearScreen();
     cout << "\n";
@@ -1743,29 +1762,29 @@ string getSlotValue(int position) {
 	
     if (snakes.find(position) != snakes.end()) 
 	{
-		output = string(" ") + "\033[" + SYMBOL_COLORS[0] + "m" + "S" + displayBoardColor;
+		output = string(" ") + SYMBOL_COLORS[0] + "S" + displayBoardColor;
 		return output;
 	}
 	
 	for(auto sn : snakes) {
 		if(sn.second == position) {
 			if(position < 10)
-				return "\033[" + SYMBOL_COLORS[1] + "m" + "T";
+				return SYMBOL_COLORS[1] + "T";
 			else
-				return string(" ") + "\033[" + SYMBOL_COLORS[0] + "m" + "T";
+				return string(" ") + SYMBOL_COLORS[0] + "T";
 		}
 	}
 	
     if (ladders.find(position) != ladders.end()) {
     	if(position < 10)
-			return "\033[" + SYMBOL_COLORS[2] + "m" + "L"; 
-		else return string(" ") + "\033[" + SYMBOL_COLORS[2] + "m" + "L";
+			return SYMBOL_COLORS[2] + "L"; 
+		else return string(" ") + SYMBOL_COLORS[2] + "L";
 	}
 	
 	if(powerups.find(position) != powerups.end()) {
 		if(position < 10)
-			return "\033[" + SYMBOL_COLORS[3] + "m" + "?"; 
-		else return string(" ") + "\033[" + SYMBOL_COLORS[3] + "m" + "?";
+			return SYMBOL_COLORS[3] + "?"; 
+		else return string(" ") + SYMBOL_COLORS[3] + "?";
 	}
     return to_string(position); 
 }
@@ -1785,40 +1804,40 @@ void displayLegend() {
     });
     int width = getConsoleWidth();
     string center = "";
-    for(int i = 1; i <= (width - 58) / 2; i++)
+    for(int i = 1; i <= (width - 63) / 2; i++)
     	center += " ";
     	
     	
-    cout << center << "Legend" << "Special Tiles   [M] BGM    [ESC] Return to Main Menu" << endl;                                   
+    cout << center << "Legend" << "     " << "Special Tiles   [M] BGM    [ESC] Return to Main Menu" << endl;                                   
     center = "";
     for(int i = 1; i <= (width - 82) / 2; i++)
     	center += " ";
-    cout <<  center << "\033[" << BORDER_COLOR << "m██████████████████████████████████████████████████████████████████████████████████" << RESET << endl;
+    cout <<  center << BORDER_COLOR << "██████████████████████████████████████████████████████████████████████████████████" << RESET << endl;
     
     string TWELVE = "            ";
 
     int maxRows = max(6, (int)sortedPlayers.size());
 
     for (int i = 0; i < maxRows; i++) {
-        cout << center << "\033[" << BORDER_COLOR << "m█";
+        cout << center << BORDER_COLOR << "█";
 
         if (i < sortedPlayers.size()) {
             string positionStr = "(" + to_string(sortedPlayers[i].position) + ")";
             int posWidth = positionStr.length();  // Get the width of the position (3 for 100)
-            cout << RESET << "\033[" << sortedPlayers[i].color << "m"
+            cout << RESET << sortedPlayers[i].color
                  << setw(20) << sortedPlayers[i].name << " : " << PLAYER_SYMBOL << " "	
                  << setw(6 - posWidth) << "" << positionStr << RESET;  // Adjust width dynamically
         } else {
             cout << RESET << setw(31) << " ";
         }
 
-        cout << RESET << setw(12) << "\033[" << BORDER_COLOR << "m█";
+        cout << RESET << setw(12) << BORDER_COLOR << "█";
 
-        if (i == 0) cout << RESET << "\033[" << SYMBOL_COLORS[0] << "m" << setw(18) << " S : Snake                " << RESET;    
-		else if (i == 1) cout << RESET << "\033[" << SYMBOL_COLORS[1] << "m" << setw(18) << " T : Tail                 " << RESET;
-		else if (i == 2) cout << RESET << "\033[" << SYMBOL_COLORS[2] << "m" << setw(18) << " L : Ladder               " << RESET;
-        else if (i == 3) cout << RESET << "\033[" << SYMBOL_COLORS[3] << "m" << setw(18) << " ? : Power-Up             " << RESET;
-        else if(i == 4) cout << RESET << setw(14) << "Playing now: " << "\033[" << Player[turnToPlay].color << "m" << setw(12) << Player[turnToPlay].name << RESET;
+        if (i == 0) cout << RESET << SYMBOL_COLORS[0] << setw(18) << " S : Snake                " << RESET;    
+		else if (i == 1) cout << RESET << SYMBOL_COLORS[1] << setw(18) << " T : Tail                 " << RESET;
+		else if (i == 2) cout << RESET << SYMBOL_COLORS[2] << setw(18) << " L : Ladder               " << RESET;
+        else if (i == 3) cout << RESET << SYMBOL_COLORS[3] << setw(18) << " ? : Power-Up             " << RESET;
+        else if(i == 4) cout << RESET << setw(14) << "Playing now: " << Player[turnToPlay].color << setw(12) << Player[turnToPlay].name << RESET;
         else if(i == 5) {
         	int nextPlayerIndex = turnToPlay;
             int attempts = numOfPlayers;
@@ -1830,17 +1849,17 @@ void displayLegend() {
             
 			cout << RESET << setw(14) << "Next Turn: ";
             if (!Player[nextPlayerIndex].completed) {
-                cout << "\033[" << Player[nextPlayerIndex].color << "m" 
-             		<< setw(12) << Player[nextPlayerIndex].name << RESET;
+                cout << Player[nextPlayerIndex].color << 
+             		setw(12) << Player[nextPlayerIndex].name << RESET;
             } else {
                 cout << RESET << setw(12) << "Next Turn: -" << RESET ;
             }
 		}
         else cout << setw(17) << "                          ";
-		cout << RESET << TWELVE << "\033[" << BORDER_COLOR << "m" << "█" << RESET << endl;
+		cout << RESET << TWELVE << BORDER_COLOR << "█" << RESET << endl;
     }
 
-    cout << center << "\033[" << BORDER_COLOR << "m██████████████████████████████████████████████████████████████████████████████████" << RESET << endl << endl;
+    cout << center << BORDER_COLOR << "██████████████████████████████████████████████████████████████████████████████████" << RESET << endl << endl;
 }
 
 
@@ -1863,9 +1882,9 @@ void displayBoard() {
     for(int s = 0; s < 10; s++) 
 	{
     	if(s==8)
-        	cout << "\033[" << BACKGROUND << ";" << BORDER_COLOR << "m" << "██████████";
+        	cout << BORDER_COLOR << "██████████";
         else
-        	cout << "\033[" << BACKGROUND << ";" << BORDER_COLOR << "m" << "████████";
+        	cout << BORDER_COLOR << "████████";
     }
     cout << endl;
     
@@ -1884,11 +1903,11 @@ void displayBoard() {
 					savedSlotNumbers[h] = number;
 						
 					if(number < 10)
-						cout << "\033[" << BACKGROUND << ";" << BORDER_COLOR << "m" << "█" << displayBoardColor << "  " << getSlotValue(number--) << displayBoardColor << "   " <<  RESET;
+						cout << BORDER_COLOR << "█" << displayBoardColor << "  " << getSlotValue(number--) << displayBoardColor << "   " <<  RESET;
 					else if(number == 100)
-						cout << "\033[" << BACKGROUND << ";" << BORDER_COLOR << "m" << "█" << displayBoardColor << "  " << getSlotValue(number--) << displayBoardColor << "   " << RESET;				
+						cout << BORDER_COLOR << "█" << displayBoardColor << "  " << getSlotValue(number--) << displayBoardColor << "   " << RESET;				
 					else
-						cout << "\033[" << BACKGROUND << ";" << BORDER_COLOR << "m" << "█" << displayBoardColor << "   " << getSlotValue(number--) << displayBoardColor << "   " << RESET;				
+						cout << BORDER_COLOR << "█" << displayBoardColor << "   " << getSlotValue(number--) << displayBoardColor << "   " << RESET;				
 						
 					colorSwap = !colorSwap;
             	}
@@ -1899,11 +1918,11 @@ void displayBoard() {
 					savedSlotNumbers[h] = number;
 					
 					if(number < 10)
-						cout << displayBoardColor << "  " << getSlotValue(number--) << displayBoardColor << "   " << RESET << "\033[" << BACKGROUND << ";" << BORDER_COLOR << "m" << "█" << RESET;
+						cout << displayBoardColor << "  " << getSlotValue(number--) << displayBoardColor << "   " << RESET << BORDER_COLOR << "█" << RESET;
 					else if(number == 100)
-						cout << "█" << displayBoardColor << "  " << getSlotValue(number--) << displayBoardColor << "   " << RESET << "\033[" << BACKGROUND << ";" << BORDER_COLOR << "m" << "█" << RESET;				
+						cout << "█" << displayBoardColor << "  " << getSlotValue(number--) << displayBoardColor << "   " << RESET << BORDER_COLOR << "█" << RESET;				
 					else
-						cout << displayBoardColor << "   " << getSlotValue(number--) << displayBoardColor << "   " << RESET << "\033[" << BACKGROUND << ";" << BORDER_COLOR << "m" << "█" << RESET;				
+						cout << displayBoardColor << "   " << getSlotValue(number--) << displayBoardColor << "   " << RESET << BORDER_COLOR << "█" << RESET;				
 						
 					colorSwap = !colorSwap;
 				}
@@ -1935,11 +1954,11 @@ void displayBoard() {
                 		
                 	if(start+h < 10 && start+h != 10) 
 					{
-                		cout << "\033[" << BACKGROUND << ";" << BORDER_COLOR << "m" << "█" << displayBoardColor << "    " << getSlotValue(start+h) << displayBoardColor << "   " << RESET;
+                		cout << BORDER_COLOR << "█" << displayBoardColor << "    " << getSlotValue(start+h) << displayBoardColor << "   " << RESET;
 					}
 					else 
 					{
-						cout << "\033[" << BACKGROUND << ";" << BORDER_COLOR << "m" << "█" << displayBoardColor << "   " << getSlotValue(start+h) << displayBoardColor << "   " << RESET;
+						cout << BORDER_COLOR << "█" << displayBoardColor << "   " << getSlotValue(start+h) << displayBoardColor << "   " << RESET;
 					}
                 	colorSwap = !colorSwap;
 				}
@@ -1949,11 +1968,11 @@ void displayBoard() {
                 		
                 	if(start+h < 10 && start+h != 10) 
 					{
-                		cout << displayBoardColor << "    " << getSlotValue(start+h) << displayBoardColor << "   " << RESET << "\033[" << BACKGROUND << ";" << BORDER_COLOR << "m" << "█" << RESET;
+                		cout << displayBoardColor << "    " << getSlotValue(start+h) << displayBoardColor << "   " << RESET << BORDER_COLOR << "█" << RESET;
 					}
 					else 
 					{
-						cout  << displayBoardColor << "   " << getSlotValue(start+h) << displayBoardColor << "   " << RESET << "\033[" << BACKGROUND << ";" << BORDER_COLOR << "m" << "█" << RESET;
+						cout  << displayBoardColor << "   " << getSlotValue(start+h) << displayBoardColor << "   " << RESET << BORDER_COLOR << "█" << RESET;
 					}
                 	colorSwap = !colorSwap;
 				}
@@ -2010,18 +2029,18 @@ void displayBoard() {
 		    size_t numPlayers = slotPlayers[slotNum].size();
 		    for (size_t i = 0; i < 3; i++) {
 		        if (i < numPlayers)
-		            num_text += "\033[" + slotPlayers[slotNum][i].second + ";" + BOARD_BACKGROUND[usingcolor] + "m" + PLAYER_SYMBOL + displayBoardColor + " " + RESET;
+		            num_text += displayBoardColor + slotPlayers[slotNum][i].second + PLAYER_SYMBOL + displayBoardColor + " " + RESET;
 		        else
 		            num_text += displayBoardColor + "  ";  
 		    }
 		
 		   
 		    if (h == 0) {
-		        BEFORE_NUMBER_TEXT = RESET + "\033[" + BACKGROUND + ";" + BORDER_COLOR + "m" + "█" + displayBoardColor + " ";
+		        BEFORE_NUMBER_TEXT = RESET + BORDER_COLOR + "█" + displayBoardColor + " ";
 		        AFTER_NUMBER_TEXT = displayBoardColor + string(" ") + RESET;
 		    } else if (h == 9) {
 		        BEFORE_NUMBER_TEXT = displayBoardColor + " ";
-		        AFTER_NUMBER_TEXT = displayBoardColor + string(" ") + RESET + "\033[" + BACKGROUND + ";" + BORDER_COLOR + "m" + "█" + RESET;
+		        AFTER_NUMBER_TEXT = displayBoardColor + string(" ") + RESET + BORDER_COLOR + "█" + RESET;
 		    } else {
 		        BEFORE_NUMBER_TEXT = displayBoardColor + " ";
 		        AFTER_NUMBER_TEXT = displayBoardColor + string(" ") + RESET;
@@ -2060,18 +2079,18 @@ void displayBoard() {
 	
 	        for (size_t i = 3; i < 6; i++) {  
 	            if (i < numPlayers)
-	                num_text += "\033[" + slotPlayers[slotNum][i].second + ";" + BOARD_BACKGROUND[usingcolor] + "m" + PLAYER_SYMBOL + displayBoardColor + " " + RESET;
+	                num_text += displayBoardColor + slotPlayers[slotNum][i].second + PLAYER_SYMBOL + displayBoardColor + " " + RESET;
 	            else
 	                num_text += displayBoardColor + "  "; 
 	        }
 	
 	        
 	        if (h == 0) {
-	            BEFORE_NUMBER_TEXT = "\033[" + BACKGROUND + ";" + BORDER_COLOR + "m█" + displayBoardColor + " ";
+	            BEFORE_NUMBER_TEXT = BORDER_COLOR + "█" + displayBoardColor + " ";
 	            AFTER_NUMBER_TEXT = displayBoardColor + string(" ") + RESET;
 	        } else if (h == 9) {
 	            BEFORE_NUMBER_TEXT = displayBoardColor + " ";
-	            AFTER_NUMBER_TEXT = displayBoardColor + string(" ") + RESET + "\033[" + BACKGROUND + ";" + BORDER_COLOR + "m█" + RESET;
+	            AFTER_NUMBER_TEXT = displayBoardColor + string(" ") + RESET + BORDER_COLOR + "█" + RESET;
 	        } else {
 	            BEFORE_NUMBER_TEXT = displayBoardColor + " ";
 	            AFTER_NUMBER_TEXT = displayBoardColor + string(" ") + RESET;
@@ -2086,9 +2105,9 @@ void displayBoard() {
 	    	cout << center;
 	        for(int s = 0; s < 10; s++) {
 	        	if(s==8)
-	            	cout << "\033[" << BACKGROUND << ";" << BORDER_COLOR << "m" << "██████████";
+	            	cout << BORDER_COLOR << "██████████";
 	            else
-	            	cout << "\033[" << BACKGROUND << ";" << BORDER_COLOR << "m" << "████████";
+	            	cout << BORDER_COLOR << "████████";
 	        }
 		}
     }
