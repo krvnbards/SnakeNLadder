@@ -150,6 +150,8 @@ struct Theme {
     string checker2;
     string optionColor;
     string highlightedOptionColor;
+    string logoColor;
+    string borderColor;
 };
 
 string boardColor = "0";
@@ -218,6 +220,16 @@ enum stat_list {
 enum stat_list STATUS = MAINMENU;
 
 vector<playa> Player;
+
+//[-------------------------------------THEMES-----------------------------]
+Theme themes[] = {
+	// NAME					   FOREGROUND			BACKGROUND		
+    {"Classic & Elegant", "\033[38;2;0;0;0m", "\033[48;2;255;255;240m", "\033[48;2;128;0;32m", "\033[48;2;255;215;0m", "\033[38;2;180;180;180m\033[48;2;40;40;40m", "\033[38;2;255;255;255m\033[48;2;180;0;0m", "\033[38;2;0;0;0m\033[48;2;255;127;39m", "\033[38;2;255;255;255m"},
+    {"Modern & Sleek", "\033[38;2;255;255;255m", "\033[48;2;46;46;46m", "\033[48;2;0;128;128m", "\033[48;2;192;192;192m", "\033[38;2;200;200;200m\033[48;2;20;20;20m", "\033[38;2;255;255;255m\033[48;2;80;0;0m", "\033[38;2;0;0;0m\033[48;2;255;127;39m", "\033[38;2;255;255;255m"},
+    {"Vibrant & Playful", "\033[38;2;0;0;128m", "\033[48;2;211;211;211m", "\033[48;2;255;102;0m", "\033[48;2;135;206;235m", "\033[38;2;255;255;0m\033[48;2;0;0;180m", "\033[38;2;0;255;0m\033[48;2;180;0;0m", "\033[38;2;0;0;0m\033[48;2;255;127;39m", "\033[38;2;0;0;0m"},
+    {"Earthy & Natural", "\033[38;2;1;50;32m", "\033[48;2;245;222;179m", "\033[48;2;226;114;91m", "\033[48;2;128;128;0m", "\033[38;2;180;150;100m\033[48;2;30;120;30m", "\033[38;2;255;255;255m\033[48;2;80;40;0m", "\033[38;2;0;0;0m\033[48;2;255;127;39m", "\033[38;2;0;0;0m"},
+    {"Default Theme", "\033[38;2;255;255;255m", "\033[48;2;0;45;45m", "\033[48;2;246;129;50m", "\033[48;2;255;229;148m", "\033[48;2;0;17;26m\033[38;2;4;234;238m", "\033[48;2;0;0;0m\033[38;2;255;102;204m", "\033[38;2;0;0;0m\033[48;2;255;127;39m", "\033[38;2;255;255;255m"}
+};
 
 
 //[--------------------------FUNCTION PROTOTYPES--------------------------]
@@ -341,7 +353,7 @@ int main()
 	    cout << "\n\n\n\n\n\n\n\n\n\n\n\n" << space << "LOADING GAME...\n"; 
 	    showProgressBar(50, consoleWidth);
 	}
-	changeTheme(1);
+	ApplyTheme(themes[4]); 
 	clearScreen();
 	PlayBackgroundMusic();
 	bgmEnabled = 1;
@@ -548,6 +560,8 @@ void announceWinner(int player) {
 void changeTheme(int theme) {
 	if(theme == 1) { // Classic
 		
+		// name fg bg checker1 checker2 optioncolor highlightedoptioncolor logocolor bordercolor
+		
 		LOGO_COLOR = "\033[38;2;0;0;0m\033[48;2;255;127;39m";
 		
 		FOREGROUND = "\033[38;2;255;255;255m";
@@ -556,7 +570,7 @@ void changeTheme(int theme) {
 		BORDER_COLOR = "\033[38;2;255;255;255m";
 					// WHITE BG BLACK TEXT         // BRIGHT RED BG BLACK TEXT
 					
-		OPTION_COLOR = "";
+		OPTION_COLOR = "\033[48;2;0;17;26m\033[38;2;4;234;238m";
 		HIGHLIGHTED_OPTION_COLOR = "\033[48;2;0;0;0m\033[38;2;255;102;204m";
 			
 		// SA BOARD SETTINGS NI
@@ -1021,7 +1035,7 @@ void slowDownOpponent(int player) {
         for (int i = 0; i < count; i++) {
             if (i == cursor)
                 cout << HIGHLIGHT << SPACE SPACE2 << " > \033[" << Player[validPlayerIndices[i]].color 
-                     << "m" << Player[validPlayerIndices[i]].name << HIGHLIGHT << "\033[K" << RESET << endl;
+                     << Player[validPlayerIndices[i]].name << HIGHLIGHT << "\033[K" << RESET << endl;
             else
                 cout << SPACE SPACE2 << RESET << "\033[" << Player[validPlayerIndices[i]].color 
                       << Player[validPlayerIndices[i]].name << RESET << endl;
@@ -1235,7 +1249,7 @@ void StartGame() {
 		}
         else
         {
-        	if (!promptRoll(player)) {
+        	if(!promptRoll(player)) {
 	            STATUS = MAINMENU;
 	            ClearGame();
 	            return;
@@ -1250,7 +1264,6 @@ void StartGame() {
 	        rollDiceAnimation();
 	        cout << "\033[7A\033[J";
 	        int roll = revealFinalDice();
-			roll=5;
 			Pause(1000);
 	        movePlayer(player, roll);
 			//roll=6;
@@ -1757,6 +1770,7 @@ void ApplyTheme(const Theme& theme) {
     HIGHLIGHTED_OPTION_COLOR = theme.highlightedOptionColor;
     BOARD_BACKGROUND[0] = theme.checker1;
     BOARD_BACKGROUND[1] = theme.checker2;
+    BORDER_COLOR = theme.borderColor;
     BOARD_TEXT[0] = "\033[38;2;0;0;0m";
     BOARD_TEXT[1] = "\033[38;2;0;0;0m";
     alt_color[0] = BOARD_TEXT[0] + BOARD_BACKGROUND[0];
@@ -1765,42 +1779,48 @@ void ApplyTheme(const Theme& theme) {
     SYMBOL_COLORS[1] = "\033[38;2;139;0;0m";
     SYMBOL_COLORS[2] = "\033[38;2;0;100;200m";
     SYMBOL_COLORS[3] = "\033[38;2;0;200;0m";
-    
-    cout << CENTER "Applying theme: " << theme.name << "\n";
+}
+
+int tawgako(string input) {
+	bool isValid = true;
+	
+	for(char ch : input) {
+		if(!isdigit(ch)) {
+			return -1;
+		}
+	}
+	
+	int num;
+	stringstream(input) >> num;
+	return num;
 }
     
 void ThemesPage() {
 	system("cls");
 	cout << "\n\n\n";
 	LogoArt();
-	
-	Theme themes[] = {
-        {"Classic & Elegant", "\033[38;2;0;0;0m", "\033[48;2;255;255;240m", "\033[48;2;128;0;32m", "\033[48;2;255;215;0m", "\033[38;2;180;180;180m\033[48;2;40;40;40m", "\033[38;2;255;255;255m\033[48;2;180;0;0m"},
-        {"Modern & Sleek", "\033[38;2;255;255;255m", "\033[48;2;46;46;46m", "\033[48;2;0;128;128m", "\033[48;2;192;192;192m", "\033[38;2;200;200;200m\033[48;2;20;20;20m", "\033[38;2;255;255;255m\033[48;2;80;0;0m"},
-        {"Vibrant & Playful", "\033[38;2;0;0;128m", "\033[48;2;211;211;211m", "\033[48;2;255;102;0m", "\033[48;2;135;206;235m", "\033[38;2;255;255;0m\033[48;2;0;0;180m", "\033[38;2;0;255;0m\033[48;2;180;0;0m"},
-        {"Earthy & Natural", "\033[38;2;1;50;32m", "\033[48;2;245;222;179m", "\033[48;2;226;114;91m", "\033[48;2;128;128;0m", "\033[38;2;180;150;100m\033[48;2;30;120;30m", "\033[38;2;255;255;255m\033[48;2;80;40;0m"}
-    };
     
-    int choice;
     cout << CENTER "Select a theme:\n";
-    for (int i = 0; i < 4; i++) {
-        cout << i + 1 << ". " << themes[i].name << "\n";
+    for (int i = 0; i < 5; i++) {
+        cout << CENTER << i + 1 << ". " << themes[i].name << "\n";
     }
     cout << CENTER "Enter your choice (1-4): ";
-    cin >> choice;
+    FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
+    string input;
+    input = _getch();
+
+	int choice = tawgako(input);
     
-    if (choice >= 1 && choice <= 4) {
-        changeTheme(choice);
-        ApplyTheme(themes[choice - 1]);   
-    } else if (choice == 0) {
-    	cout << CENTER "Going back to main menu\n";
-    	_getch();
+    if (choice >= 1 && choice <= 5) {
+        ApplyTheme(themes[choice - 1]);
+        cout << endl << CENTER "Applying theme: " << themes[choice-1].name << "\n";
+    	Pause(1500);
+        STATUS=MAINMENU;
+    }  else  {
+        cout << endl << CENTER "Invalid choice. Going back to main menu.\n";
+        _getch();
     	STATUS = MAINMENU;
-	} else  {
-        cout << CENTER "Invalid choice. Try again.\n";
     }
-    system("pause");
-    STATUS = MAINMENU;
 }    
     
 void SettingsPage() {
@@ -2257,31 +2277,32 @@ string getSlotValue(int position) {
 	
     if (snakes.find(position) != snakes.end()) 
 	{
-		output = string(" ") + SYMBOL_COLORS[0] + "S" + displayBoardColor;
+		int tail = snakes[position];
+		string value = "S (" + to_string(tail) + ")";
+		int padding = (8 - value.length()) / 2;
+		output = string(padding, ' ') + SYMBOL_COLORS[0] + value + string(8 - padding - value.length(),  ' ');
 		return output;
 	}
 	
 	if(powerups.find(position) != powerups.end()) {
-		if(position < 10)
-			return SYMBOL_COLORS[3] + "?"; 
-		else return string(" ") + SYMBOL_COLORS[3] + "?";
-	}
-	
-	for(auto sn : snakes) {
-		if(sn.second == position) {
-			if(position < 10)
-				return SYMBOL_COLORS[1] + "T";
-			else
-				return string(" ") + SYMBOL_COLORS[0] + "T";
-		}
+		string value = "?";
+		int padding = (8 - value.length()) / 2;
+		output = string(padding, ' ') + SYMBOL_COLORS[3] + value + string(8 - padding - value.length(),  ' ');
+		return output;
 	}
 	
     if (ladders.find(position) != ladders.end()) {
-    	if(position < 10)
-			return SYMBOL_COLORS[2] + "L"; 
-		else return string(" ") + SYMBOL_COLORS[2] + "L";
+    	int up = ladders[position];
+		string value = "L (" + to_string(up) + ")";
+		int padding = (8 - value.length()) / 2;
+		output = string(padding, ' ') + SYMBOL_COLORS[2] + value + string(8 - padding - value.length(),  ' ');
+		return output;
 	}
-    return to_string(position); 
+	
+	string value = to_string(position);
+	int padding = (8 - value.length()) / 2;
+	output = string(padding, ' ') + value + string(8 - padding - value.length(),  ' ');
+	return output;
 }
 
 void FillRemainingPlayers() {
@@ -2420,11 +2441,11 @@ void displayBoard() {
 					savedSlotNumbers[h] = number;
 						
 					if(number < 10)
-						cout << BORDER_COLOR << "█" << displayBoardColor << "  " << getSlotValue(number--) << displayBoardColor << "   " <<  RESET;
+						cout << BORDER_COLOR << "█" << displayBoardColor << getSlotValue(number--) << displayBoardColor << RESET;
 					else if(number == 100)
-						cout << BORDER_COLOR << "█" << displayBoardColor << "  " << getSlotValue(number--) << displayBoardColor << "   " << RESET;				
+						cout << BORDER_COLOR << "█" << displayBoardColor << getSlotValue(number--) << displayBoardColor << RESET;				
 					else
-						cout << BORDER_COLOR << "█" << displayBoardColor << "   " << getSlotValue(number--) << displayBoardColor << "   " << RESET;				
+						cout << BORDER_COLOR << "█" << displayBoardColor << getSlotValue(number--) << displayBoardColor << RESET;				
 						
 					colorSwap = !colorSwap;
             	}
@@ -2435,11 +2456,11 @@ void displayBoard() {
 					savedSlotNumbers[h] = number;
 					
 					if(number < 10)
-						cout << displayBoardColor << "  " << getSlotValue(number--) << displayBoardColor << "   " << RESET << BORDER_COLOR << "█" << RESET;
+						cout << displayBoardColor << getSlotValue(number--) << displayBoardColor << RESET << BORDER_COLOR << "█" << RESET;
 					else if(number == 100)
-						cout << "█" << displayBoardColor << "  " << getSlotValue(number--) << displayBoardColor << "   " << RESET << BORDER_COLOR << "█" << RESET;				
+						cout << "█" << displayBoardColor << getSlotValue(number--) << displayBoardColor << RESET << BORDER_COLOR << "█" << RESET;				
 					else
-						cout << displayBoardColor << "   " << getSlotValue(number--) << displayBoardColor << "   " << RESET << BORDER_COLOR << "█" << RESET;				
+						cout << displayBoardColor << getSlotValue(number--) << displayBoardColor << RESET << BORDER_COLOR << "█" << RESET;				
 						
 					colorSwap = !colorSwap;
 				}
@@ -2450,9 +2471,9 @@ void displayBoard() {
                 	savedSlotNumbers[h] = number;
                 	
             		if(number == 100) 
-            			cout << displayBoardColor << "  " << getSlotValue(number--) << displayBoardColor << " " << RESET;
+            			cout << displayBoardColor << getSlotValue(number--) << displayBoardColor << RESET;
             		else
-						cout << displayBoardColor << "   " << getSlotValue(number--) << displayBoardColor << "   " << RESET;
+						cout << displayBoardColor << getSlotValue(number--) << displayBoardColor << RESET;
 						
 					colorSwap = !colorSwap;
             	}
@@ -2471,11 +2492,11 @@ void displayBoard() {
                 		
                 	if(start+h < 10 && start+h != 10) 
 					{
-                		cout << BORDER_COLOR << "█" << displayBoardColor << "    " << getSlotValue(start+h) << displayBoardColor << "   " << RESET;
+                		cout << BORDER_COLOR << "█" << displayBoardColor << getSlotValue(start+h) << displayBoardColor << RESET;
 					}
 					else 
 					{
-						cout << BORDER_COLOR << "█" << displayBoardColor << "   " << getSlotValue(start+h) << displayBoardColor << "   " << RESET;
+						cout << BORDER_COLOR << "█" << displayBoardColor << getSlotValue(start+h) << displayBoardColor << RESET;
 					}
                 	colorSwap = !colorSwap;
 				}
@@ -2485,11 +2506,11 @@ void displayBoard() {
                 		
                 	if(start+h < 10 && start+h != 10) 
 					{
-                		cout << displayBoardColor << "    " << getSlotValue(start+h) << displayBoardColor << "   " << RESET << BORDER_COLOR << "█" << RESET;
+                		cout << displayBoardColor << getSlotValue(start+h) << displayBoardColor << RESET << BORDER_COLOR << "█" << RESET;
 					}
 					else 
 					{
-						cout  << displayBoardColor << "   " << getSlotValue(start+h) << displayBoardColor << "   " << RESET << BORDER_COLOR << "█" << RESET;
+						cout  << displayBoardColor << getSlotValue(start+h) << displayBoardColor << RESET << BORDER_COLOR << "█" << RESET;
 					}
                 	colorSwap = !colorSwap;
 				}
@@ -2498,9 +2519,9 @@ void displayBoard() {
                 	savedSlotNumbers[h] = start + h;
                 		
                 	if(start+h < 10 && start+h != 10)
-                		cout << displayBoardColor << "    " << getSlotValue(start+h) << displayBoardColor << "   " << RESET;	
+                		cout << displayBoardColor << getSlotValue(start+h) << displayBoardColor << RESET;	
                 	else
-                		cout << displayBoardColor << "   " << getSlotValue(start+h) << displayBoardColor << "   " << RESET;	
+                		cout << displayBoardColor << getSlotValue(start+h) << displayBoardColor << RESET;	
                 		
                 	colorSwap = !colorSwap;
 				}
