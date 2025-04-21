@@ -94,7 +94,7 @@ using namespace std;
 #define SPACE "                                                         "
 #define SPACE2 "                                              "
 #define SPACE1 "  "
-#define CENTER "                                                                                         "
+#define CENTER "                                                                             "
 
 string OPTION_COLOR = "";
 string HIGHLIGHTED_OPTION_COLOR = "";
@@ -140,6 +140,16 @@ struct playa {
 	bool snakeShield;
 	bool Shield;
 	bool isAI;
+};
+
+struct Theme {
+    string name;
+    string foreground;
+    string background;
+    string checker1;
+    string checker2;
+    string optionColor;
+    string highlightedOptionColor;
 };
 
 string boardColor = "0";
@@ -201,6 +211,8 @@ enum stat_list {
 	SETTINGS_PAGE,
 	SELECT_PLAYER_COLOR,
 	EXIT_GAME,
+	SELECT_THEMES,
+	VOLUME_PAGE,
 };
 
 enum stat_list STATUS = MAINMENU;
@@ -225,6 +237,7 @@ void StartGame();
 void SelectColors();
 void SelectPlayerColor();
 void ClearGame();
+void displaySettingsPage(int cursor);
 void showCursor();
 void hideCursor();
 void SettingsPage();
@@ -238,6 +251,8 @@ void handleLadderOrSnake(int playerIndex);
 void slowDownOpponent(int player);
 void applyPowerUp(int player);
 void movePlayer(int player, int roll);
+void ThemesPage();
+void VolumePage();
 void announceWinner(int player);
 bool checkGameOver();
 void clearScreen();
@@ -255,22 +270,12 @@ void PrintCharDelay2(string text, int delay);
 void PrintAnimation(const string lines[], int size, int delay);
 void DevelopersArt();
 void changeTheme(int theme);
+void ApplyTheme(const Theme& theme);
 //------------------------------------------------------------------------
 
 int main()
 {
-	Sleep(2000); // Wait for 2 seconds
 
-    // Simulate pressing F11 twice
-    SimulateF11();
-    Sleep(500); // Small delay between key presses
-    SimulateF11();
-
-    // Simulate pressing Enter twice
-    Sleep(500); // Small delay between key presses
-    SimulateEnter();
-    Sleep(500); // Small delay between key presses
-    SimulateEnter();
 	HWND hwnd = GetConsoleWindow();
 	if (hwnd) {
         
@@ -311,13 +316,30 @@ int main()
 	srand(time(0));
     
     if(enableLoading == 1) {
-    	
+   		Sleep(2000); // Wait for 2 seconds
+
+   	 	// Simulate pressing F11 twice
+    	SimulateF11();
+    	Sleep(500); // Small delay between key presses
+    	SimulateF11();
+
+    	// Simulate pressing Enter twice
+    	Sleep(500); // Small delay between key presses
+   		SimulateEnter();
+    	Sleep(500); // Small delay between key presses
+    	SimulateEnter();
+    
     	cout << "\n\n\n\n\n";
     	LogoArt();
 		
 		int consoleWidth = getConsoleWidth(); // Get the console width
-	    cout << "\n\n\n\n\n\n\n\n\n\n\n\n" SPACE SPACE "        LOADING GAME...\n"; 
-	    showProgressBar(100, consoleWidth);
+		string space="";
+		for(int i = 1; i <= (consoleWidth-15) / 2; i++)
+			space += " ";
+			
+			
+	    cout << "\n\n\n\n\n\n\n\n\n\n\n\n" << space << "LOADING GAME...\n"; 
+	    showProgressBar(50, consoleWidth);
 	}
 	changeTheme(1);
 	clearScreen();
@@ -339,6 +361,14 @@ int main()
 			}
 			case ABOUT_PAGE: {
 				AboutPage();
+				break;
+			}
+			case SELECT_THEMES: {
+				ThemesPage();
+				break;
+			}
+			case VOLUME_PAGE: {
+				VolumePage();
 				break;
 			}
 			case SETTINGS_PAGE: {
@@ -382,6 +412,7 @@ void moveToPosition(int x, int y) {
     // Set the console cursor position to the specified coordinates
     SetConsoleCursorPosition(hConsole, coord);
 }
+
 void EnterName() {
 	int colorIndex = 0;
 	bool proceed=true;
@@ -516,8 +547,7 @@ void announceWinner(int player) {
 
 void changeTheme(int theme) {
 	if(theme == 1) { // Classic
-		OPTION_COLOR = "\033[38;2;160;181;170m\033[48;2;3;70;99m";
-		HIGHLIGHTED_OPTION_COLOR = "\033[38;2;157;34;14m\033[48;2;237;160;15m";
+		
 		LOGO_COLOR = "\033[38;2;0;0;0m\033[48;2;255;127;39m";
 		
 		FOREGROUND = "\033[38;2;255;255;255m";
@@ -525,6 +555,9 @@ void changeTheme(int theme) {
 		RESET = FOREGROUND+BACKGROUND;
 		BORDER_COLOR = "\033[38;2;255;255;255m";
 					// WHITE BG BLACK TEXT         // BRIGHT RED BG BLACK TEXT
+					
+		OPTION_COLOR = "";
+		HIGHLIGHTED_OPTION_COLOR = "\033[48;2;0;0;0m\033[38;2;255;102;204m";
 			
 		// SA BOARD SETTINGS NI
 		BOARD_BACKGROUND[0] = "\033[48;2;246;129;50m"; 
@@ -583,7 +616,7 @@ int getNextPlayer(int currentPlayer) {
 }
 
 void diceArt(int number) {
-    const char* diceFaces[6][7] = {
+    const string diceFaces[6][7] = {
         {
             "█▀▀▀▀▀▀▀▀▀▀▀▀▀█",
             "█             █",
@@ -644,16 +677,18 @@ void diceArt(int number) {
     string center="";
     for(int i = 1; i < (width - 15) / 2; i++)
     	center += " ";
+    	
+    	int player = turnToPlay;
 
     for (int i = 0; i < 7; ++i) {
 
-        cout << center << diceFaces[number - 1][i] << endl;
+        cout << RESET << center << Player[player].color << "\033[48;2;255;255;255m" << diceFaces[number - 1][i] << RESET << endl;
     }
 }
 
 void PlayBackgroundMusic() {
     mciSendString("open \"resources/background-music.mp3\" type mpegvideo alias bgm", NULL, 0, NULL);
-    mciSendString("setaudio bgm volume to 500", NULL, 0, NULL); // Volume range: 0 (mute) to 1000 (max)
+    mciSendString("setaudio bgm volume to 150", NULL, 0, NULL); // Volume range: 0 (mute) to 1000 (max)
     mciSendString("play bgm repeat", NULL, 0, NULL); // Repeat to loop continuously
 }
 
@@ -669,6 +704,7 @@ void playSound(int type) {
     		mciSendString("close hop", NULL, 0, NULL);
     		
 			mciSendString("open resources/hop-sfx.wav alias hop", NULL, 0, NULL);
+			mciSendString("setaudio hop volume to 400", NULL, 0, NULL);
     		mciSendString("play hop", NULL, 0, NULL);
 		}
 		else if(type == 2){ // menu switch
@@ -723,13 +759,36 @@ void playSound(int type) {
 		
 			mciSendString("stop tp", NULL, 0, NULL);
     		mciSendString("close tp", NULL, 0, NULL);
-    		
-			mciSendString("open \"resources/teleport.mp3\" type mpegvideo alias tp", NULL, 0, NULL);
+			mciSendString("open resources/teleport.wav alias tp", NULL, 0, NULL);
+			mciSendString("setaudio tp volume to 350", NULL, 0, NULL);
     		mciSendString("play tp", NULL, 0, NULL);
+		}
+		else if (type == 10) {
+			
+			mciSendString("stop boost", NULL, 0, NULL);
+    		mciSendString("close boost", NULL, 0, NULL);
+			mciSendString("open resources/boost.mp3 type mpegvideo alias boost", NULL, 0, NULL);
+			mciSendString("setaudio boost volume to 400", NULL, 0, NULL);
+    		mciSendString("play boost", NULL, 0, NULL);
+		}
+		else if (type == 11) {
+			
+			mciSendString("stop shield", NULL, 0, NULL);
+    		mciSendString("close shield", NULL, 0, NULL);
+			mciSendString("open resources/shield.mp3 type mpegvideo alias shield", NULL, 0, NULL);
+			//mciSendString("setaudio shield volume to 400", NULL, 0, NULL);
+    		mciSendString("play shield", NULL, 0, NULL);
+		}
+		else if (type == 12) {
+			
+			mciSendString("stop slow", NULL, 0, NULL);
+    		mciSendString("close slow", NULL, 0, NULL);
+			mciSendString("open resources/freeze.mp3 type mpegvideo alias slow", NULL, 0, NULL);
+			//mciSendString("setaudio slow volume to 400", NULL, 0, NULL);
+    		mciSendString("play slow", NULL, 0, NULL);
 		}
 	}
 }
-
 
 
 void ClearGame() {
@@ -838,10 +897,10 @@ void teleportPlayer(int playerIndex) {
     while (snakes.find(newPos) != snakes.end()) {
         newPos--;
     }
-    
+  
     cout << SPACE SPACE2 << SYMBOL_COLORS[3] << "TELEPORT! "<< RESET << Player[playerIndex].name << " activated a teleport power-up! --> " << newPos << endl;
-    Pause(1500);
-
+	Pause(1500);
+     
     movePlayerAnimation(playerIndex, newPos, true, true);
     handleLadderOrSnake(playerIndex); // Check for further movement from ladder/snake
 }
@@ -868,21 +927,25 @@ void applyPowerUp(int player) {
 
         cout << SPACE SPACE2 << SYMBOL_COLORS[3] 
              << "You will move +" << boostAmount << " extra spaces forward!" << RESET << endl;
+        if(enableSFX) playSound(10);
         Pause(1500);
 
         movePlayerAnimation(player, finalPos, true, false);
         handleLadderOrSnake(player);
     } 
     else if (power == 2) { // Slow Down (Opponent moves -3)
+    	playSound(12);
         slowDownOpponent(player);
     }
     else if(power == 3) { // Teleport
     	teleportPlayer(player);
 	}
 	else if(power == 4) { // Snake Repellent
+		playSound(11);
 		giveShield(player, 1);
 	}
 	else if(power == 5) {
+		playSound(11);
 		giveShield(player, 2);
 	}
 }
@@ -1159,7 +1222,8 @@ void StartGame() {
 	        rollDiceAnimation();
 	        cout << "\033[7A\033[J";
 	        int roll = revealFinalDice();
-	        //roll = 1;
+	        //roll=5;
+			Pause(1000);
 	        movePlayer(player, roll);
 	
 	        if (Player[player].position == 100) {
@@ -1178,15 +1242,18 @@ void StartGame() {
 	        }
 	
 			playSound(8);
+			
+			
 	        // Roll and reveal dice
 	        cout << "\033[1A\r\033[J\033[" << Player[player].color;
 	        cout << endl;
 	        rollDiceAnimation();
 	        cout << "\033[7A\033[J";
 	        int roll = revealFinalDice();
-	        roll = 1;
+			roll=5;
+			Pause(1000);
 	        movePlayer(player, roll);
-	
+			//roll=6;
 	        if (Player[player].position == 100) {
 	            announceWinner(player);
 	            if (checkGameOver()) return;
@@ -1421,7 +1488,7 @@ void AboutPage() {
 							   {(CENTER"█▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄█")}};
 
 	int nameSize = sizeof(devNames)/sizeof(devNames[0]);
-	PrintAnimation(devNames, nameSize, 200);
+	PrintAnimation(devNames, nameSize, 100);
 
 	while(1) {
 
@@ -1430,7 +1497,7 @@ void AboutPage() {
 		for(int i = 1; i<=(width - 24)/2; i++)
 			center+=" ";
 			
-		PrintCharDelay2(CENTER"See developers description(y/n): ", 15);
+		PrintCharDelay2(CENTER"See developers description(y/n): ", 10);
 		cin >> choice;
 		cout << endl;
 
@@ -1443,7 +1510,7 @@ void AboutPage() {
 											    CENTER"		but today is all we really have and you'll never get it back.\n"
 											    CENTER"		and you'll never get it back. No regrets!\n")}};
 
-			const string devDescription2[] = {{(CENTER "Age:	20")},
+			const string devDescription2[] = {{(CENTER "Age:	18")},
 											 {( CENTER"Status: Student")},
 											 {( CENTER"Gender: Male")},
 											 {( CENTER"Motto: Live intentionally!\n")}};
@@ -1451,7 +1518,7 @@ void AboutPage() {
 			const string devDescription3[] = {{(CENTER "Age:	19")},
 											 {( CENTER"Status: Student")},
 											 {(CENTER "Gender: Male")},
-											 {(CENTER "Motto:	Just do it!")}};
+											 {(CENTER "Motto: Just do it!")}};
 
 			const string* devDESCRIPTIONS[] = {devDescription1, devDescription2, devDescription3};								 
 			int descriptionSize[] = {
@@ -1649,7 +1716,7 @@ void ThankyouArt() {
   		istringstream stream(ThankYouText);
    		string line;
   		while(getline(stream, line)) {
-   		std::cout << setw(34) << SPACE2 SPACE  << line << std::endl; 
+   		std::cout << setw(34) << SPACE SPACE1 SPACE1 SPACE1 SPACE1 SPACE1  << line << std::endl; 
    }
 
 }
@@ -1669,7 +1736,7 @@ void ForPlayingArt() {
 	istringstream stream(forPlayingText);
 	string line;
 	while(getline(stream, line)) {
-		std::cout << SPACE2 SPACE << line << std:: endl;
+		std::cout << SPACE SPACE1 SPACE1 << line << std:: endl;
 	}
 }
 
@@ -1682,9 +1749,105 @@ void ExitGame() {
 	exit(0);	
 }
 
-void SettingsPage() {
-	
+void ApplyTheme(const Theme& theme) {
+    FOREGROUND = theme.foreground;
+    BACKGROUND = theme.background;
+    RESET = FOREGROUND + BACKGROUND;
+    OPTION_COLOR = theme.optionColor;
+    HIGHLIGHTED_OPTION_COLOR = theme.highlightedOptionColor;
+    BOARD_BACKGROUND[0] = theme.checker1;
+    BOARD_BACKGROUND[1] = theme.checker2;
+    BOARD_TEXT[0] = "\033[38;2;0;0;0m";
+    BOARD_TEXT[1] = "\033[38;2;0;0;0m";
+    alt_color[0] = BOARD_TEXT[0] + BOARD_BACKGROUND[0];
+    alt_color[1] = BOARD_TEXT[1] + BOARD_BACKGROUND[1];
+    SYMBOL_COLORS[0] = "\033[38;2;139;0;0m";
+    SYMBOL_COLORS[1] = "\033[38;2;139;0;0m";
+    SYMBOL_COLORS[2] = "\033[38;2;0;100;200m";
+    SYMBOL_COLORS[3] = "\033[38;2;0;200;0m";
+    
+    cout << CENTER "Applying theme: " << theme.name << "\n";
 }
+    
+void ThemesPage() {
+	system("cls");
+	cout << "\n\n\n";
+	LogoArt();
+	
+	Theme themes[] = {
+        {"Classic & Elegant", "\033[38;2;0;0;0m", "\033[48;2;255;255;240m", "\033[48;2;128;0;32m", "\033[48;2;255;215;0m", "\033[38;2;180;180;180m\033[48;2;40;40;40m", "\033[38;2;255;255;255m\033[48;2;180;0;0m"},
+        {"Modern & Sleek", "\033[38;2;255;255;255m", "\033[48;2;46;46;46m", "\033[48;2;0;128;128m", "\033[48;2;192;192;192m", "\033[38;2;200;200;200m\033[48;2;20;20;20m", "\033[38;2;255;255;255m\033[48;2;80;0;0m"},
+        {"Vibrant & Playful", "\033[38;2;0;0;128m", "\033[48;2;211;211;211m", "\033[48;2;255;102;0m", "\033[48;2;135;206;235m", "\033[38;2;255;255;0m\033[48;2;0;0;180m", "\033[38;2;0;255;0m\033[48;2;180;0;0m"},
+        {"Earthy & Natural", "\033[38;2;1;50;32m", "\033[48;2;245;222;179m", "\033[48;2;226;114;91m", "\033[48;2;128;128;0m", "\033[38;2;180;150;100m\033[48;2;30;120;30m", "\033[38;2;255;255;255m\033[48;2;80;40;0m"}
+    };
+    
+    int choice;
+    cout << CENTER "Select a theme:\n";
+    for (int i = 0; i < 4; i++) {
+        cout << i + 1 << ". " << themes[i].name << "\n";
+    }
+    cout << CENTER "Enter your choice (1-4): ";
+    cin >> choice;
+    
+    if (choice >= 1 && choice <= 4) {
+        changeTheme(choice);
+        ApplyTheme(themes[choice - 1]);   
+    } else if (choice == 0) {
+    	cout << CENTER "Going back to main menu\n";
+    	_getch();
+    	STATUS = MAINMENU;
+	} else  {
+        cout << CENTER "Invalid choice. Try again.\n";
+    }
+    system("pause");
+    STATUS = MAINMENU;
+}    
+    
+void SettingsPage() {
+	system("cls");
+	cout << "\n\n\n";
+	LogoArt();
+    moveToPosition(0, 13);
+    displaySettingsPage(0);
+    int cursor = 0;
+    while (true) {
+        hideCursor();
+        cout << "\n\n";
+        moveToPosition(0, 13);
+        displaySettingsPage(cursor);
+
+        FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
+        char input = _getch();
+
+        switch (input) {
+            case KEY_ENTER:
+                playSound(7);
+                if (enableSFX) playSound(2);
+                STATUS = (cursor == 0) ? MAINMENU : 
+                         (cursor == 1) ? SELECT_THEMES : VOLUME_PAGE;
+                return;
+            case KEY_UP: case KEY_W: case 'w':
+                cursor = (cursor == 0) ? 2 : cursor - 1;
+                if (enableSFX) playSound(2);
+                break;
+            case KEY_DOWN: case KEY_S: case 's':
+                cursor = (cursor == 2) ? 0 : cursor + 1;
+                if (enableSFX) playSound(2);
+                break;
+        }
+    }
+}
+
+void VolumePage() {
+	system("cls");
+	cout << "\n\n\n";
+	
+	LogoArt();
+	cout << endl << SPACE << RESET << "Sorry, this page is unavailable at the moment. :(";
+	Pause(3000);
+	STATUS=SETTINGS_PAGE;
+}
+	
 
 void displayMenu(int cursor) {
 	string NORMAL_COLOR = OPTION_COLOR;       // Green (Default)
@@ -1849,6 +2012,57 @@ void displayPlayerOptions(int cursor, int page) {
 		cout << endl;
 	    cout << centerspace2 << "Page 2 of 2" << endl;
 	}
+}
+
+void displaySettingsPage(int cursor) {
+	string NORMAL_COLOR = OPTION_COLOR;       // Green (Default)
+    string HIGHLIGHTED_COLOR = HIGHLIGHTED_OPTION_COLOR;  // Yellow (Highlighted)
+    //string RESETCOL = "\033[0m";
+    
+    int center = getConsoleWidth();
+    
+    string centerspace = "";
+    for(int i= 1; i <= (center - 44) / 2; i++) {
+    	centerspace += " ";
+	}
+
+	string playerOptions[] = {
+	"████████████████████████████████████████████\n"
+	"█                                          █\n"
+	"█         █▀▀█  █▀▀█  █▀▀█  █ ▄▀           █\n"
+	"█         █▀▀▄  █▄▄█  █     █▀▄            █\n"
+	"█         █▄▄█  █  █  █▄▄█  █  █           █\n"
+	"█                                          █\n"
+	"████████████████████████████████████████████\n",
+	 
+	"████████████████████████████████████████████\n"
+	"█▌                                        ▐█\n"
+	"█▌           ▀█▀ █ █ █▀▀ █▄█ █▀▀          ▐█\n"
+	"█▌            █  █▀█ █▀▀ █ █ █▀▀          ▐█\n"
+	"█▌            ▀  ▀ ▀ ▀▀▀ ▀ ▀ ▀▀▀          ▐█\n"
+	"█▌                                        ▐█\n"
+	"████████████████████████████████████████████\n",	
+		
+	"████████████████████████████████████████████\n"
+	"█▌                                        ▐█\n"
+	"█▌        █ █ █▀█ █   █ █ █▄█ █▀▀         ▐█\n"
+	"█▌        ▀▄▀ █ █ █   █ █ █ █ █▀▀         ▐█\n"
+	"█▌         ▀  ▀▀▀ ▀▀▀ ▀▀▀ ▀ ▀ ▀▀▀         ▐█\n"
+	"█▌                                        ▐█\n"
+	"████████████████████████████████████████████\n",
+	};
+
+	for(int i = 0; i < 3; i++) {
+		std::string COLOR = (i == cursor) ? HIGHLIGHTED_COLOR : NORMAL_COLOR;
+
+        std::istringstream stream(playerOptions[i]);
+        std::string line;
+        while (getline(stream, line)) {
+            std::cout << RESET << centerspace << COLOR << line << RESET << std::endl;
+        }
+        cout << endl;
+	}	
+	cout << endl;
 }
 
 
@@ -2431,4 +2645,3 @@ void setConsoleSize(int width, int height) {
 }
 
 //------------------------------------------------------------------------
-
